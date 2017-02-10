@@ -1,4 +1,4 @@
-//note: for the ouput.  Last 5 lines are the fraction bits, first four are the 
+//note: for the ouput.  Last 5 lines are the fraction bits, first four are the
 //exponent bits.
 module regimeshifter_with_exp_8bit(
   input [7:0] posit,
@@ -28,8 +28,6 @@ module regimeshifter_with_exp_8bit(
   assign eposit[2] = |((shiftselector[4:2] & posit[2:0]));
   assign eposit[1] = |((shiftselector[4:3] & posit[1:0]));
   assign eposit[0] = |((shiftselector[4]   & posit[0]));
-
-  //assign eposit[8:0] = 9'b000000000;
 
   //now, let's work on the exponent lookup table.
 
