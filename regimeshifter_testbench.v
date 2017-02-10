@@ -15,6 +15,7 @@ module test_bench();
     #10 assign posit=8'b01110110;
     #10 assign posit=8'b00010110;
     #10 assign posit=8'b01010111;
+    #10;
   end
 
 endmodule
