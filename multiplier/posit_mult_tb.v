@@ -5,7 +5,7 @@ module multiply_tb();
   reg clk, rst;
   reg [7:0] lhs;
   reg [7:0] rhs;
-  wire [20:0] res;
+  reg [20:0] res;
 
   //declare the multiply block here.
   clocked_mult_8bit mul8(
@@ -49,8 +49,8 @@ module multiply_tb();
     lhs = 8'h66; //2.75
     //-> res should be: -1.58984375
     // Posit{16} representation:  0xad20
-    // unpacked Posit16: 1_01110_1001011100000
-    // rehexified: 5d2e0
+    // unpacked Posit16: 0 0 1 01111 0110100100000
+    // rehexified: 5ed20
 
     @(posedge clk)
     //another multiplication.
@@ -58,8 +58,8 @@ module multiply_tb();
     lhs = 8'h8f; //-4.5
     //-> res should be: -4.078125
     // Posit{16} representation:  0x8fd8
-    // unpacked Posit16: 1 10000 0000010100000
-    // rehexified: 600a0
+    // unpacked Posit16: 0 0 1 10001 1111101100000
+    // rehexified: 63f60
 
     @(posedge clk)
     //another multiplication.
@@ -67,8 +67,9 @@ module multiply_tb();
     lhs = 8'hb2; //-1.4375
     //-> res should be: 0.673828125
     // Posit{16} representation:  0x2b20
-    // unpacked Posit16: 0 01101 0101100100000
-    // rehexified: 1ab20
+    // unpacked Posit16: 0 0 0 01110 0101100100000
+    // rehexified: 1cb20
+    #10;
 
   end
 endmodule
