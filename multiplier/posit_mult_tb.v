@@ -5,13 +5,13 @@ module multiply_tb();
   reg clk, rst;
   reg [7:0] lhs;
   reg [7:0] rhs;
-  wire [18:0] res;
+  wire [20:0] res;
 
   //declare the multiply block here.
-  multiply_8bit mul8(
+  clocked_mult_8bit mul8(
     .clk        (clk),
-    .leftposit  (lhs),
-    .rightposit (rhs),
+    .left_posit (lhs),
+    .right_posit(rhs),
     .result     (res));
 
   always begin
