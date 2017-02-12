@@ -1,5 +1,17 @@
 //note: for the ouput.  Last 5 lines are the fraction bits, first four are the
 //exponent bits.
+
+module explines_to_encoding(
+  input[12:1] explines,
+  output[3:0] expencoding);
+
+  //a lookup table that translates individual exponent lines into a binary encoding
+  assign expencoding[0] = |{explines[1], explines[3], explines[5],  explines[7],  explines[9],  explines[11]};
+  assign expencoding[1] = |{explines[2], explines[3], explines[6],  explines[7],  explines[10], explines[11]};
+  assign expencoding[2] = |{explines[4], explines[5], explines[6],  explines[7],  explines[12]};
+  assign expencoding[3] = |{explines[8], explines[9], explines[10], explines[11], explines[12]};
+endmodule
+
 module regimeshifter_with_exp_8bit(
   input [7:0] posit,
   output[8:0] eposit);
@@ -9,6 +21,15 @@ module regimeshifter_with_exp_8bit(
   wire [4:0] shiftselector;
   wire [1:0] terminalline;
   wire [12:1] explut;
+
+  wire signxorinv;
+
+  explines_to_encoding eencode(
+    .explines    (explut)
+    .expencoding (eposit[8:5])
+    );
+
+  assign signxorinv = posit[6] ^ posit[7];
 
   assign xorlines = (posit[5:0] ^ {6{posit[6]}});
   assign xnorlines = ~(xorlines[5:0]);
@@ -31,15 +52,9 @@ module regimeshifter_with_exp_8bit(
 
   //now, let's work on the exponent lookup table.
 
-  assign explut[5:1]  = ({5{!posit[6]}} & shiftselector[4:0]);
-  assign explut[12:6] = {7{posit[6]}} & {terminalline[0], terminalline[1],
-                                         shiftselector[0], shiftselector[1],
-                                         shiftselector[2], shiftselector[3],
-                                         shiftselector[4]};
-
-  //create the actual lookups.
-  assign eposit[5] = |{explut[1], explut[3], explut[5], explut[7], explut[9], explut[11]};
-  assign eposit[6] = |{explut[2], explut[3], explut[6], explut[7], explut[10], explut[11]};
-  assign eposit[7] = |{explut[4], explut[5], explut[6], explut[7], explut[12]};
-  assign eposit[8] = |{explut[8], explut[9], explut[10], explut[11], explut[12]};
+  assign explut[5:1]  = ({5{!signxorinv}} & shiftselector[4:0]);
+  assign explut[12:6] = {7{signxorinv}}   & {terminalline[0],  terminalline[1],
+                                             shiftselector[0], shiftselector[1],
+                                             shiftselector[2], shiftselector[3],
+                                             shiftselector[4]};
 endmodule
