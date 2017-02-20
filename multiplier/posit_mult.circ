@@ -29,8 +29,9 @@ This file is intended to be loaded by Logisim (http://www.cburch.com/logisim/).
       <a name="inputs" val="2"/>
     </tool>
     <tool name="NOR Gate">
-      <a name="facing" val="west"/>
+      <a name="facing" val="south"/>
       <a name="size" val="30"/>
+      <a name="inputs" val="2"/>
     </tool>
     <tool name="XOR Gate">
       <a name="facing" val="south"/>
@@ -44,7 +45,13 @@ This file is intended to be loaded by Logisim (http://www.cburch.com/logisim/).
       <a name="width" val="12"/>
     </tool>
   </lib>
-  <lib desc="#Memory" name="4"/>
+  <lib desc="#Memory" name="4">
+    <tool name="ROM">
+      <a name="contents">addr/data: 8 8
+0
+</a>
+    </tool>
+  </lib>
   <lib desc="#I/O" name="5"/>
   <lib desc="#Base" name="6">
     <tool name="Text Tool">
@@ -803,15 +810,15 @@ This file is intended to be loaded by Logisim (http://www.cburch.com/logisim/).
       <a name="fanout" val="12"/>
       <a name="incoming" val="12"/>
     </comp>
-    <comp lib="1" loc="(640,680)" name="NAND Gate">
-      <a name="facing" val="south"/>
-      <a name="size" val="30"/>
-      <a name="inputs" val="2"/>
-    </comp>
     <comp lib="3" loc="(900,520)" name="Adder">
       <a name="width" val="12"/>
     </comp>
     <comp lib="1" loc="(870,410)" name="OR Gate">
+      <a name="facing" val="south"/>
+      <a name="size" val="30"/>
+      <a name="inputs" val="2"/>
+    </comp>
+    <comp lib="1" loc="(640,680)" name="NOR Gate">
       <a name="facing" val="south"/>
       <a name="size" val="30"/>
       <a name="inputs" val="2"/>
