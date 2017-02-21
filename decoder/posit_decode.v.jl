@@ -6,7 +6,7 @@
 end
 
 @verilog function set_one_hot_shift(posit::Wire, bits::Integer)
-  @name_suffix        "$(bits)_bit"
+  @name_suffix        "$(bits)bit"
   #describe the incoming posit wire.
   @wire posit         range(bits)
 
@@ -26,7 +26,7 @@ end
 
 @verilog function set_fraction(posit::Wire, one_hot_shifts::Wire, bits::Integer)
   #describe the incoming posit wire.
-  @name_suffix                  "$(bits)_bits"
+  @name_suffix                  "$(bits)bit"
   @wire posit                   range(bits)
   @wire one_hot_shifts          range(bits-1)
 
@@ -40,7 +40,7 @@ end
 end
 
 @verilog function set_one_hot_regime(inverted::Wire{1:0v}, one_hot_shifts::Wire, bits::Integer)
-  @name_suffix                  "$(bits)_bits"
+  @name_suffix                  "$(bits)bit"
   @wire one_hot_shifts          range(bits-1)
 
   #calculate the maximum one-hot value.
@@ -56,7 +56,7 @@ end
 regime_bits(n::Integer) = Integer(ceil(log2(n))) + 1
 
 @verilog function set_binary_regime(one_hot_regime::Wire, bits::Integer)
-  @name_suffix                  "$(bits)_bits"
+  @name_suffix                  "$(bits)bit"
   #calculate the maximum one-hot value.
   #assert that the regimes wire contains the maximum value (missing 0 of course)
   @wire one_hot_regime        (2 * bits - 3):1v
@@ -78,7 +78,7 @@ regime_bits(n::Integer) = Integer(ceil(log2(n))) + 1
 end
 
 @verilog function set_regime(signinv::Wire{1:0v}, one_hot_shifts::Wire, bits::Integer)
-  @name_suffix                  "$(bits)_bits"
+  @name_suffix                  "$(bits)bit"
   #the one_hot_shifts can only take a limited number of bits in.
   @wire one_hot_shifts      range(bits-1)
 
@@ -94,8 +94,9 @@ end
   result
 end
 
-function decode_posit(posit::Wire, bits::Integer)
-  @wire posit       range(bits)
+@verilog function decode_posit(posit::Wire, bits::Integer)
+  @name_suffix                  "$(bits)bit"
+  @wire posit                   range(bits)
 
   #are all but the first bit zero?
   allzeros = nor(posit[(bits-2):0v])
@@ -106,12 +107,12 @@ function decode_posit(posit::Wire, bits::Integer)
   #representation is.  In the case of 8-bit posits, 6 means we're at the far
   #left; 0 means the regime bits go all the way to the end.
 
-  one_hot_shift = set_one_hot_shift(posit[bits-1:0v], bits)
+  one_hot_shift = set_one_hot_shift(posit, bits)
 
-  fraction_bits = set_fraction(posit[(bits-3):0v], one_hot_shift[bits-2:2v])
+  fraction_bits = set_fraction(posit, one_hot_shift, bits)
 
-  regime_bits = set_regime(posit[bits-1:(bits-2)v], one_hot_shift,)
+  regime_bits = set_regime(posit[(bits-1):(bits-2)v], one_hot_shift, bits)
 
-  #set the wire to the expected representation.
-  result = Wire(posit[bits-1], regime_bits, fraction_bits)
+  #set the wire to the extended posit representation.
+  result = Wire(infzeroflags, posit[bits-1], regime_bits, fraction_bits)
 end

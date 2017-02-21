@@ -80,3 +80,37 @@ module set_regime_8_bits(
   assign invertedrail = {^(signinv), ~^(signinv)};
 
 endmodule
+
+module decode_posit_8_bits(
+  input [7:0] posit,
+  output [11:0] result);
+
+  wire [6:0] one_hot_shift;
+  wire allzeros;
+  wire [4:0] fraction_bits;
+  wire [1:0] infzeroflags;
+  wire [3:0] regime_bits;
+
+  set_inf_zero_bits set_inf_zero_bits_infzeroflags(
+    .signbit (posit[7]),
+    .allzeros (allzeros),
+    .result (infzeroflags));
+
+  set_one_hot_shift_8_bit set_one_hot_shift_8_bit_one_hot_shift(
+    .posit (posit),
+    .result (one_hot_shift));
+
+  set_fraction_8_bits set_fraction_8_bits_fraction_bits(
+    .posit (posit),
+    .one_hot_shifts (one_hot_shift),
+    .result (fraction_bits));
+
+  set_regime_8_bits set_regime_8_bits_regime_bits(
+    .signinv (posit[7:6]),
+    .one_hot_shifts (one_hot_shift),
+    .result (regime_bits));
+
+  assign allzeros = ~(|(posit[6:0]));
+  assign result = {infzeroflags,posit[7],regime_bits,fraction_bits};
+
+endmodule
