@@ -18,7 +18,7 @@ doc"""
 @verilog function dec_shift_onehot(posit::Wire, bits::Integer)
   @suffix             "$(bits)bit"
   #describe the incoming posit wire.
-  @wire posit         range(bits)
+  @input posit         range(bits)
 
   #xorlines and xnorlines define a set of rails that are a comparison of the
   #value with the next-to-msb bit ("invert bit") and the bit referred to.
@@ -51,8 +51,8 @@ doc"""
 @verilog function dec_expfrac(posit::Wire, shift_onehot::Wire, bits::Integer)
   #describe the incoming posit wire.
   @suffix                       "$(bits)bit"
-  @wire posit                   range(bits)
-  @wire shift_onehot            range(bits-1)
+  @input posit                   range(bits)
+  @input shift_onehot            range(bits-1)
 
   expfrac = Wire(bits-3)
 
@@ -77,7 +77,7 @@ doc"""
 """
 @verilog function dec_regime_onehot(inv_rails::Wire{1:0v}, shift_onehot::Wire, bits::Integer)
   @suffix                       "$(bits)bit"
-  @wire shift_onehot            range(bits-1)
+  @input shift_onehot            range(bits-1)
 
   #inv_rails[1] is sign xor inv  - aka "inverted"
   #inv_rails[0] is sign xnor inv - aka "uninverted"
@@ -118,7 +118,7 @@ doc"""
   @suffix                     "$(bits)bit"
   #calculate the maximum one-hot value.
   #assert that the regimes wire contains the maximum value (missing 0 of course)
-  @wire one_hot_regime        (2 * bits - 3):1v
+  @input one_hot_regime        (2 * bits - 3):1v
 
   one_hot_max = (2 * bits - 3)
   #calculating the number of decoded regime bits is tricky.
@@ -145,7 +145,7 @@ doc"""
 """
 @verilog function dec_regime(signinv::Wire{1:0v}, shift_onehot::Wire, bits::Integer)
   @suffix                       "$(bits)bit"
-  @wire shift_onehot            range(bits-1)
+  @input shift_onehot            range(bits-1)
   #------------------------------------------
 
   regime = Wire(regime_bits(bits))
@@ -185,7 +185,7 @@ doc"""
 """
 @verilog function decode_posit(posit::Wire, bits::Integer)
   @suffix                       "$(bits)bit"
-  @wire posit                   range(bits)
+  @input posit                   range(bits)
   #---------------------------------------
 
   #are all but the first bit zero?

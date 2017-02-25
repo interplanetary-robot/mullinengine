@@ -10,7 +10,7 @@ doc"""
 """
 @verilog function enc_shift_bin(regime::Wire, bits::Integer)
   @suffix                         "$(bits)bit"
-  @wire regime                    range(regime_bits(bits))
+  @input regime                    range(regime_bits(bits))
 
   #calculate and store the bits of the regime.
   rbits = regime_bits(bits)
@@ -42,7 +42,7 @@ doc"""
 """
 @verilog function enc_regime_onehot(shift_bin::Wire, bits::Integer)
   @suffix                           "$(bits)bit"
-  @wire shift_bin                   range(regime_bits(bits) - 1)
+  @input shift_bin                   range(regime_bits(bits) - 1)
 
   neg_shift_bin = ~shift_bin
 
@@ -70,7 +70,7 @@ doc"""
 """
 @verilog function enc_efrac_gs(sign::SingleWire, inv::SingleWire, frac::Wire, guard::SingleWire, summary::SingleWire, bits::Integer)
   @suffix                           "$(bits)bit"
-  @wire frac                        range(bits - 3)
+  @input frac                        range(bits - 3)
 
   leading_bits = xorxnor(Wire(sign, inv))
 
@@ -90,8 +90,8 @@ doc"""
 """
 @verilog function enc_shifted_frac_gs(one_hot::Wire, ext_frac::Wire, bits::Integer)
   @suffix                          "$(bits)bit"
-  @wire one_hot                    range(bits - 1)
-  @wire ext_frac                   range(bits + 1)
+  @input one_hot                    range(bits - 1)
+  @input ext_frac                   range(bits + 1)
 
   #the guard bit and the summary bit have different dynamics.
   shifted_frac = Wire(bits + 1)
@@ -132,7 +132,7 @@ doc"""
 """
 @verilog function enc_finalizer(inf::SingleWire, zero::SingleWire, sign::SingleWire, shifted_frac_gs::Wire, bits::Integer)
   @suffix                         "$(bits)bit"
-  @wire shifted_frac_gs           range(bits+1)
+  @input shifted_frac_gs           range(bits+1)
 
   rounded_flag = ((shifted_frac_gs[0] & shifted_frac_gs[1]) | (shifted_frac_gs[1] & shifted_frac_gs[2]))
 
@@ -168,7 +168,7 @@ doc"""
 """
 @verilog function encode_posit(eposit::Wire, guard::SingleWire, summary::SingleWire, bits::Integer)
   @suffix                         "$(bits)bit"
-  @wire eposit                    range(bits + regime_bits(bits))
+  @input eposit                   range(bits + regime_bits(bits))
 
   rbits = regime_bits(bits)
   totalbits = bits + rbits
