@@ -44,9 +44,9 @@ end
 @test ohs(0b1000_1000) == 1 << 2
 @test ohs(0b1000_0100) == 1 << 3
 
-print("testing onehotshift_8...")
+print("testing dec_shift_onehot...")
 for idx = 0x01:0xFF if idx != 0x80 #ignore the inf value
-    @test (set_one_hot_shift(idx, 8), idx) == (ohs(idx), idx)
+    @test (dec_shift_onehot(idx, 8), idx) == (ohs(idx), idx)
 end end
 println("OK!")
 
@@ -72,7 +72,7 @@ end
 @test fraction(0b0001_1010) == (0b1_0100)
 
 for idx = 0x01:0xFF if idx != 0x80 #ignore the inf value
-  @test (set_fraction(idx, ohs(idx) , 8), idx) == (fraction(idx), idx)
+  @test (dec_expfrac(idx, ohs(idx) , 8), idx) == (fraction(idx), idx)
 end end
 
 ################################################################################
@@ -107,18 +107,18 @@ end
 
 print("testing one_hot_regime...")
 for idx = 0x01:0xFF if idx != 0x80 #ignore the inf value
-  @test set_one_hot_regime(invertedduple(idx), ohs(idx) , 8) == ohe(idx)
+  @test dec_regime_onehot(invertedduple(idx), ohs(idx) , 8) == ohe(idx)
 end end
 println("OK")
 
 ################################################################################
 # test binary encoding test.
 for idx = 0x00:0x0d
-  @test set_binary_regime(one(UInt64) << (idx - 1), 8) == idx
+  @test dec_regime_bin(one(UInt64) << (idx - 1), 8) == idx
 end
 #also with 16-bits
 for idx = 0x00:0x1d
-  @test set_binary_regime(one(UInt64) << (idx - 1), 16) == idx
+  @test dec_regime_bin(one(UInt64) << (idx - 1), 16) == idx
 end
 #=
 #not to be actually implemented.

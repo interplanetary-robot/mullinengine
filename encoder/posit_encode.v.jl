@@ -18,21 +18,13 @@ doc"""
 
   regime_subtrahend = Wire(Unsigned(regime_bias(bits)), rbits)
 
-  println("regime_subtrahend: ", regime_subtrahend)
-
   #generate the inverted signed regime.
   signed_regime     = regime - regime_subtrahend
 
-  println("signed_regime: ", signed_regime)
-
   inv_signed_regime = -signed_regime[range(sbits)] - Wire(one(UInt64),sbits)
-
-  println("inv_signed_regime: ", inv_signed_regime)
 
   #pull the sign of signed regime to determine what to do next.
   regime_sign = signed_regime[sbits]
-
-  println("regime_sign: ", regime_sign)
 
   #mux the two possibilities, then recombine
   result = Wire(signed_regime[sbits],
@@ -74,12 +66,7 @@ doc"""
   @name_suffix "$(bits)bit"
   @wire frac range(bits - 3)
 
-  println("detected sign and inverse: ", Wire(sign, inv))
-
   leading_bits = xorxnor(Wire(sign, inv))
-
-  #top bit should be xnor, next bit should be xnor
-  println("extended fraction top bits:", Wire(leading_bits[0], leading_bits[1]))
 
   ext_fraction = Wire(leading_bits[0], leading_bits[1], frac, guard, summary)
 end
@@ -107,13 +94,7 @@ doc"""
 
   shifted_frac[0] = |(summary_accumulator)
   #new guard bit: [6:0] [7:1]
-  println("--------------------")
-  println("guard bit comparator")
-  println(one_hot[(bits-2):0v], " & ", ext_frac[bits-1:1v])
-  println(one_hot[(bits-2):0v] &  ext_frac[bits-1:1v])
   shifted_frac[1] = |(one_hot[(bits-2):0v] & ext_frac[bits-1:1v])
-  println("guard bit: ", shifted_frac[1])
-  println("--------------------23,")
   for idx in (bits-1:2v)
     #examples from bits == 8
     #shifted_frac[2] = |({one_hot[5:0] & ext_frac[7:2], |(one_hot[6]) & ext_frac[7]})
@@ -131,15 +112,9 @@ end
 
   rounded_flag = ((shifted_frac[0] & shifted_frac[1]) | (shifted_frac[1] & shifted_frac[2]))
 
-  println("rounded_flag: ", rounded_flag)
-
   rounded_value = shifted_frac[bits:2v] + Wire((bits - 2) * Wire(false), rounded_flag)
 
-  println("rounded_value: ", rounded_value)
-
   provisional_posit = Wire(sign, rounded_value)
-
-  println("provisional_posit: ", provisional_posit)
 
   infzero = inf | zero
 
@@ -153,23 +128,13 @@ end
   rbits = regime_bits(bits)
   totalbits = bits + rbits
 
-  println("encoding posit: ", eposit)
-
   regimeshift = regime_shift(eposit[(totalbits-4):(bits-3)v], bits)
-
-  println("regimeshift: ", regimeshift)
 
   one_hot = one_hot_regime(regimeshift[(rbits-2):0v], bits)
 
-  println("one_hot: ", one_hot)
-
   extended_frac = ext_fraction_encoding(eposit[totalbits - 3], regimeshift[rbits - 1], eposit[(bits-4):0v], guard, summary, bits)
 
-  println("extended frac: ", extended_frac)
-
   shifted_frac = shifted_fraction_encoding(one_hot, extended_frac, bits)
-
-  println("shifted_frac: ", shifted_frac)
 
   posit = encoding_finalizer(eposit[totalbits - 1], eposit[totalbits - 2], eposit[totalbits - 3], shifted_frac, bits)
 end
