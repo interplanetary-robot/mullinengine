@@ -16,7 +16,7 @@ doc"""
   and the result, shift_onehot should have [bits - 2]bits.
 """
 @verilog function dec_shift_onehot(posit::Wire, bits::Integer)
-  @name_suffix        "$(bits)bit"
+  @suffix             "$(bits)bit"
   #describe the incoming posit wire.
   @wire posit         range(bits)
 
@@ -50,7 +50,7 @@ doc"""
 """
 @verilog function dec_expfrac(posit::Wire, shift_onehot::Wire, bits::Integer)
   #describe the incoming posit wire.
-  @name_suffix                  "$(bits)bit"
+  @suffix                       "$(bits)bit"
   @wire posit                   range(bits)
   @wire shift_onehot            range(bits-1)
 
@@ -76,7 +76,7 @@ doc"""
   shift_onehot should have bits-2 wires.
 """
 @verilog function dec_regime_onehot(inv_rails::Wire{1:0v}, shift_onehot::Wire, bits::Integer)
-  @name_suffix                  "$(bits)bit"
+  @suffix                       "$(bits)bit"
   @wire shift_onehot            range(bits-1)
 
   #inv_rails[1] is sign xor inv  - aka "inverted"
@@ -115,7 +115,7 @@ doc"""
   should have ⌈log2(bits)⌉ + 1 bits (usually log2(bits) + 1).
 """
 @verilog function dec_regime_bin(one_hot_regime::Wire, bits::Integer)
-  @name_suffix                  "$(bits)bit"
+  @suffix                     "$(bits)bit"
   #calculate the maximum one-hot value.
   #assert that the regimes wire contains the maximum value (missing 0 of course)
   @wire one_hot_regime        (2 * bits - 3):1v
@@ -144,7 +144,7 @@ doc"""
   posit.
 """
 @verilog function dec_regime(signinv::Wire{1:0v}, shift_onehot::Wire, bits::Integer)
-  @name_suffix                  "$(bits)bit"
+  @suffix                       "$(bits)bit"
   @wire shift_onehot            range(bits-1)
   #------------------------------------------
 
@@ -184,7 +184,7 @@ doc"""
   output is labeled "eposit".
 """
 @verilog function decode_posit(posit::Wire, bits::Integer)
-  @name_suffix                  "$(bits)bit"
+  @suffix                       "$(bits)bit"
   @wire posit                   range(bits)
   #---------------------------------------
 
