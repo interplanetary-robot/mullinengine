@@ -8,3 +8,5 @@ include("./decoder/posit_decode_test.jl")
 
 include("./encoder/posit_encode.v.jl")
 include("./encoder/posit_encode_test.jl")
+
+include("./multiplier/posit_mult.v.jl")
