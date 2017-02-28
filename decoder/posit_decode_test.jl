@@ -2,10 +2,10 @@
 #set_inf_zero_bits
 
 print("testing inf_zero_bits...")
-@test set_inf_zero_bits(0b0, 0b0) == 0b00 # unless all bits are zero, it's neither inf nor zero.
-@test set_inf_zero_bits(0b1, 0b0) == 0b00 #
-@test set_inf_zero_bits(0b0, 0b1) == 0b01 # top bit zero => zero
-@test set_inf_zero_bits(0b1, 0b1) == 0b10 # top bit one => inf
+@test dec_inf_zero_bits(0b0, 0b0) == 0b00 # unless all bits are zero, it's neither inf nor zero.
+@test dec_inf_zero_bits(0b1, 0b0) == 0b00 #
+@test dec_inf_zero_bits(0b0, 0b1) == 0b01 # top bit zero => zero
+@test dec_inf_zero_bits(0b1, 0b1) == 0b10 # top bit one => inf
 println("OK!")
 ## all values confirmed using EDA-Testbench (will integrate verilated tests soon)
 

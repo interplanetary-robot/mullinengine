@@ -1,4 +1,4 @@
-@verilog function set_inf_zero_bits(
+@verilog function dec_inf_zero_bits(
   signbit::SingleWire,
   allzeros::SingleWire)
 
@@ -191,7 +191,7 @@ doc"""
   #are all but the first bit zero?
   allzeros = nor(posit[(msb-1):0v])
 
-  infzeroflags = set_inf_zero_bits(posit[msb], allzeros)
+  infzeroflags = dec_inf_zero_bits(posit[msb], allzeros)
 
   #the one_hot_shift is a one-hot representation of how far we must move the
   #values.  This value is used both in extracting the relevant fraction bits

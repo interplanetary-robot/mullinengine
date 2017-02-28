@@ -85,23 +85,54 @@ println("-------")
 
 using SigmoidNumbers
 
-for lhs = 0b0:0xFF
-  for rhs = 0b0:0xFF
-    lhsp = Posit{8,0}(lhs)
-    rhsp = Posit{8,0}(rhs)
-    try
-      prodp = lhsp * rhsp
+function test_8bit_mul()
+  print("testing 8 bit mul...")
+  for lhs = 0b0:0xFF
+    for rhs = 0b0:0xFF
+      lhsp = Posit{8,0}(lhs)
+      rhsp = Posit{8,0}(rhs)
+      try
+        prodp = lhsp * rhsp
 
-      prodb = reinterpret(UInt64, prodp) >> 56
+        prodb = reinterpret(UInt64, prodp) >> 56
 
-      @test (prodb, lhs, rhs) == (posit_multiplier(lhs, rhs, 8, 8), lhs, rhs)
-    catch e
-      #skip over NaNs.
-      if isa(e,SigmoidNumbers.NaNError)
-        continue
+        @test (prodb, lhs, rhs) == (posit_multiplier(lhs, rhs, 8, 8), lhs, rhs)
+      catch e
+        #skip over NaNs.
+        if isa(e,SigmoidNumbers.NaNError)
+          continue
+        end
+        rethrow()
       end
-      rethrow()
-    end
 
+    end
   end
+  println("OK!")
 end
+
+function test_16bit_mul()
+  print("testing 16 bit mul...")
+  for lhs = 0x0000:0xFFFF
+    for rhs = 0x0000:0xFFFF
+      lhsp = Posit{16,0}(lhs)
+      rhsp = Posit{16,0}(rhs)
+      try
+        prodp = lhsp * rhsp
+
+        prodb = reinterpret(UInt64, prodp) >> 48
+
+        @test (prodb, lhs, rhs) == (posit_multiplier(lhs, rhs, 16, 16), lhs, rhs)
+      catch e
+        #skip over NaNs.
+        if isa(e,SigmoidNumbers.NaNError)
+          continue
+        end
+        rethrow()
+      end
+
+    end
+  end
+  println("OK!")
+end
+
+#test_16bit_mul()
