@@ -11,29 +11,30 @@ doc"""
   #a top value for negation.
   inv_frac = -frac
   top_neg = (|)(inv_frac) & crosssign
-  selected_inv_frac = inv_frac & ((bits - 2) * crosssign)
-  selected_frac     = frac & ((bits - 2) * ~crosssign)
-  result = Wire(top_neg, selected_inv_frac[bits - 2], (selected_inv_frac[(bits-1):0v] | selected_frac[(bit-2):1v]), selected_frac[0])
+  selected_inv_frac = inv_frac & ((bits - 3) * crosssign)
+  selected_frac     = frac & ((bits - 3) * ~crosssign)
+  result = Wire(top_neg, selected_inv_frac[msb], (selected_inv_frac[msb-1:0v] | selected_frac[msb:1v]), selected_frac[0])
 end
 
 doc"""
   mul_frac_finisher()
 
   finishes up work on the fraction side.  Effectively, this looks at the reported
-  'provisional fraction' result and reports whether or not it's necessary to
-  do whatever.
+  'provisional fraction' result and reports a fraction value that's got on its
+  MSB special instructions on how to augment the exponent.
 """
 @verilog function mul_frac_finisher(final_sign::SingleWire, provisional_fraction::Wire, bits::Integer)
-  @suffix "$(bits)bit"
+  @suffix                               "$(bits)bit"
+  @input provisional_fraction           range(bits*2 - 4)
 
   shift_selector = final_sign ^ provisional_fraction[msb]
 
   exponent_augment = Wire(2)
-  exponent_augment[1] = ~^(provisional_fraction[(msb):(msb-1)v])  #take the top two for this value.
+  exponent_augment[1] = (~(provisional_fraction[msb] | provisional_fraction[msb-1])) & (~final_sign)  #take the top two for this value.
   exponent_augment[0] = shift_selector
 
-  selected_one_shift_fraction = ((bits * 2 - 6) * shift_selector)  & provisional_fraction[(msb-1):1v]
-  selected_two_shift_fraction = ((bits * 2 - 6) * ~shift_selector) & provisional_fraction[(msb-2):0v]
+  selected_one_shift_fraction = ((bits * 2 - 5) * shift_selector)  & provisional_fraction[(msb-1):0v]
+  selected_two_shift_fraction = ((bits * 2 - 5) * ~shift_selector) & Wire(provisional_fraction[(msb-2):0v], Wire(false))
   selected_fraction = selected_one_shift_fraction | selected_two_shift_fraction
 
   result = Wire(exponent_augment, selected_fraction)
@@ -41,23 +42,23 @@ end
 
 doc"""
 
-  fraction_multiplier(SingleWire, Wire, SingleWire, Wire, bits_in)
+  mul_frac(SingleWire, Wire, SingleWire, Wire, bits_in)
 
   performs a fraction multiplication.  Outputs:
 
   | exponent_augment | MSB  ...fraction...  LSB |
   |       2 bits     |          f bits          |
 
-  where f is length(lhs_frac) * length(rhs_frac)
+  where f is length(lhs_frac) + length(rhs_frac) + 1
 
 """
 @verilog function mul_frac(lhs_sign::SingleWire, lhs_frac::Wire, rhs_sign::SingleWire, rhs_frac::Wire, bits::Integer)
   @suffix "$(bits)bit"
-  @input lhs_frac        range(bits - 2)
-  @input rhs_frac        range(bits - 2)
+  @input lhs_frac        range(bits - 3)
+  @input rhs_frac        range(bits - 3)
 
-  lhs_frac_rhs_sign = mul_frac_hidden_crossmultiplier(lhs_frac, rhs_sign, bits)
-  rhs_frac_lhs_sign = mul_frac_hidden_crossmultiplier(rhs_frac, lhs_sign, bits)
+  lhs_frac_rhs_sign = mul_frac_hidden_crossmultiplier(rhs_sign, lhs_frac, bits)
+  rhs_frac_lhs_sign = mul_frac_hidden_crossmultiplier(lhs_sign, rhs_frac, bits)
 
   top_hidden_bit = lhs_sign ^ rhs_sign
   next_hidden_bit = ~(lhs_sign | rhs_sign)
@@ -72,10 +73,9 @@ doc"""
   #the top two bits have to take the sum of the previous results.
   hidden_bit_lhs_sum[msb:(msb-1)v] = Wire(top_hidden_bit, next_hidden_bit) + lhs_frac_rhs_sign[msb:(msb-1)v]
 
-
   #full_hidden_bit_sum represents the result of summing all of the hidden bit
   #components.
-  full_hidden_bit_sum = hidden_lhs_sum + rhs_frac_lhs_sign
+  full_hidden_bit_sum = hidden_bit_lhs_sum + rhs_frac_lhs_sign
 
   #fracmultiply is the basic result of the binary multiply.
   fracmultiply = lhs_frac * rhs_frac
@@ -84,18 +84,18 @@ doc"""
   frac_result = Wire(bits * 2 - 4)
 
   #the trailing bits of frac_result come exclusively from the direct binary multiply.
-  frac_result[(bits-3):0v] = fracmultiply[(bits-3):0v]
+  frac_result[(bits-4):0v] = fracmultiply[(bits-4):0v]
 
   #add in the sum of the hidden bit products to the leading bits of frac_multiply.
-  frac_result[(bits * 2 - 5):(bits-2)v] = full_hidden_bit_sum + Wire(Wire(0b00,2), fracmultiply[(2 * bits - 1):(bits-2)v])
+  frac_result[msb:(bits-3)v] = full_hidden_bit_sum + Wire(Wire(0b00,2), fracmultiply[msb:(bits-3)v])
 
   #amend the fraction so that it's shifted and report whether or not it's been shifted
-  multiplied_frac = mul_frac_finisher(frac_result, bits)
+  multiplied_frac = mul_frac_finisher(top_hidden_bit, frac_result, bits)
 end
 
 @verilog function mul_frac_trimmer(untrimmed_fraction::Wire, bits_in::Integer, bits_out::Integer)
   @suffix                           "$(bits_in)bit_to_$(bits_out)bit"
-  @input untrimmed_fraction         range((bits_in-3) * 2)
+  @input untrimmed_fraction         ((bits_in-3) * 2:0v)
   @assert                           bits_in <= bits_out
 
   product_size = (bits_in-3) * 2
@@ -118,7 +118,12 @@ end
 
 doc"""
   mul_exp_sum calculates the sum of two biased exponents and rebiases it based
-  on the new, desired output.
+  on the new, desired output.  Also outputs a bit that signifies if the fraction
+  needs to be cleared.
+
+  | clear_bit | MSB    ...exponent...    LSB |
+  |   1 bit   |     regime_bits(bits_in)     |
+
 """
 @verilog function mul_exp_sum(prod_sign::SingleWire, lhs_exp::Wire, rhs_exp::Wire, frac_adjustment::Wire{1:0v}, bits_in::Integer, bits_out::Integer)
   @assert bits_in <= bits_out
@@ -131,11 +136,12 @@ doc"""
   #  Use two padding bits because that enables proper tracking of which values
   # are negative-minimal, and which values are
   tracked_biased_width = max(regime_bits(bits_out), regime_bits(bits_in) + 2)
-  input_padding = destination_width - length(lhs_exp)
+  input_padding = tracked_biased_width - length(lhs_exp)
 
   #set up an initial variable to hold the adjustment value.
 
-  exponential_bias_adjustment = exp_bias(bits_out) - 2 * exp_bias(bits_in)
+  exponential_bias_adjustment = regime_bias(bits_out) - 2 * regime_bias(bits_in)
+#  println("exponential_bias_adjustment:", exponential_bias_adjustment)
 
   #set up an initial constant wire with this exponential bias adjustment
 
@@ -153,24 +159,26 @@ doc"""
   #overflow and underflow checking.
 
   #next we need to check to see if the exponent exceeds the minimum or the maximum.
-  minimum_exceeded = adj_exp_sum[msb] | (~prod_sign & (adj_exp_sum == Wire(one(UInt64), tracked_biased_width)))
+  minimum_exceeded = adj_exp_sum[msb] | (~prod_sign & (adj_exp_sum == Wire(zero(UInt64), tracked_biased_width)))
   #if we're substituting the minimum, the value that applies is !prod_sign.
   #first check to see that it's indeed positive, then check to see that
-  maximum_exceeded = (~adj_exp_sum[msb]) & (adj_exp_sum > Wire(max_biased_exp(bits_out), tracked_biased_width)) |
-                      (adj_exp_sum[msb]) & (adj_exp_sum > Wire(max_biased_exp(bits_out) - 1, tracked_biased_width))
+  maximum_exceeded = (~adj_exp_sum[msb]) & (~prod_sign) & (adj_exp_sum > Wire(max_biased_exp(bits_out), tracked_biased_width)) |
+                     (~adj_exp_sum[msb]) & (prod_sign)  & (adj_exp_sum > Wire(max_biased_exp(bits_out) - 1, tracked_biased_width))
 
   output_bits = regime_bits(bits_out)
 
   #create a panel of substitute values ready to go.
   clipping_value = Wire(output_bits)
-  clipping_value[msb:1v] = Wire(max_biased_exp(bits) - 1, output_bits)[msb:1v] & ((output_bits - 1) * ~prod_sign)
+  clipping_value[msb:1v] = Wire(max_biased_exp(bits_in) - 1, output_bits)[msb:1v] & ((output_bits - 1) * maximum_exceeded)
   clipping_value[0] = ~prod_sign
 
   do_exp_clipping = minimum_exceeded | maximum_exceeded
 
-  exp_sum = adj_exp_sum[range(output_bits)] & (output_bits * ~do_exp_clipping) | (clipping_value & (output_bits * do_exp_clipping))
+  exp_sum = Wire(do_exp_clipping,
+    adj_exp_sum[range(output_bits)] & (output_bits * ~do_exp_clipping) |
+    (clipping_value & (output_bits * do_exp_clipping))
+    )
 end
-
 
 doc"""
   posit_multiplier(Wire, Wire, bits_in, bits_out)
@@ -188,25 +196,31 @@ doc"""
   lhs_inf  = lhs[msb]
   lhs_zer  = lhs[msb-1]
   lhs_sgn  = lhs[msb-2]
-  lhs_exp  = lhs[(msb-3):(bits_in-2)v]
-  lhs_frac = lhs[(bits_in - 3):0v]
+  lhs_exp  = lhs[(msb-3):(bits_in-3)v]
+  lhs_frac = lhs[range(bits_in - 3)]
 
   rhs_inf  = rhs[msb]
   rhs_zer  = rhs[msb-1]
   rhs_sgn  = rhs[msb-2]
-  rhs_exp  = lhs[(msb-3):(bits_in-2)v]
-  rhs_frac = rhs[(bits_in - 3):0v]
+  rhs_exp  = rhs[(msb-3):(bits_in-3)v]
+  rhs_frac = rhs[range(bits_in-3)]
 
   multiplied_frac = mul_frac(lhs_sgn, lhs_frac, rhs_sgn, rhs_frac, bits_in)
-  prod_frac = mul_frac_trimmer(multiplied_frac[msb-2:0v], bits_in, bits_out)
+  provisional_prod_frac = mul_frac_trimmer(multiplied_frac[msb-2:0v], bits_in, bits_out)
 
   prod_inf = lhs_inf | rhs_inf
   prod_zer = lhs_zer | rhs_zer
   prod_sgn = lhs_sgn ^ rhs_sgn
 
-  prod_exp = mul_exp_sum(prod_sgn, lhs_exp, rhs_exp, prod_frac[msb:(msb-1)v], bits_in, bits_out)
+  extended_prod_exp = mul_exp_sum(prod_sgn, lhs_exp, rhs_exp, multiplied_frac[msb:(msb-1)v], bits_in, bits_out)
 
-  eproduct = Wire(prod_inf, prod_zer, prod_sgn, prod_exp, prod_frac[msb-2:0v])
+  #it's possible that we'll need to clear the fraction due to the exponent being
+  #extreme.
+  prod_frac = ((bits_out - 1) * ~extended_prod_exp[msb]) & provisional_prod_frac
+
+  eproduct = Wire(prod_inf, prod_zer, prod_sgn, extended_prod_exp[(msb-1):0v], prod_frac)
+
+  eproduct
 end
 
 @verilog function posit_multiplier(lhs::Wire, rhs::Wire, bits_in::Integer, bits_out::Integer)
@@ -214,10 +228,10 @@ end
   @input lhs range(bits_in)                  #decare that lhs and rhs
   @input rhs range(bits_in)                  #decare that lhs and rhs
 
-  lhs_extended = posit_decode(lhs)
-  rhs_extended = posit_encode(rhs)
+  lhs_extended = decode_posit(lhs, bits_in)
+  rhs_extended = decode_posit(rhs, bits_in)
 
   mul_result_extended = posit_extended_multiplier(lhs_extended, rhs_extended, bits_in, bits_out)
 
-  mul_result = posit_encode(mul_result_extended[msb:2v], mul_result_extended[1], mul_result_extended[0], bits_out)
+  mul_result = encode_posit(mul_result_extended[msb:2v], mul_result_extended[1], mul_result_extended[0], bits_out)
 end
