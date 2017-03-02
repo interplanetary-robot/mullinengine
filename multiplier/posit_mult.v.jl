@@ -229,9 +229,12 @@ end
   @input rhs range(bits_in)                  #decare that lhs and rhs
 
   lhs_extended = decode_posit(lhs, bits_in)
+
   rhs_extended = decode_posit(rhs, bits_in)
 
   mul_result_extended = posit_extended_multiplier(lhs_extended, rhs_extended, bits_in, bits_out)
 
   mul_result = encode_posit(mul_result_extended[msb:2v], mul_result_extended[1], mul_result_extended[0], bits_out)
+
+  mul_result
 end
