@@ -13,6 +13,7 @@ include("./encoder/posit_encode_test.jl")
 include("./multiplier/posit_mult_test.jl")
 =#
 
+#=
 #codegen
 enc_file = generate_verilog_file("verilog/", encode_posit, (8,))
 dec_file = generate_verilog_file("verilog/", decode_posit, (8,))
@@ -28,3 +29,4 @@ for idx1 in 0x00:0xFF
     @test (veval(idx1, idx2), idx1, idx2) == (posit_multiplier(idx1, idx2, 8, 8), idx1, idx2)
   end
 end
+=#
