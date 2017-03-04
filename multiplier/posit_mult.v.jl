@@ -155,29 +155,6 @@ doc"""
   lhs_exp_sum =  bias_wire    + Wire((input_padding * Wire(false)), lhs_exp)
   dual_exp_sum = lhs_exp_sum  + Wire((input_padding * Wire(false)), rhs_exp)
   adj_exp_sum =  dual_exp_sum + Wire((tracked_biased_width - 2) * Wire(false), frac_adjustment)
-
-  #overflow and underflow checking.
-
-  #next we need to check to see if the exponent exceeds the minimum or the maximum.
-  minimum_exceeded = adj_exp_sum[msb] | (~prod_sign & (adj_exp_sum == Wire(zero(UInt64), tracked_biased_width)))
-  #if we're substituting the minimum, the value that applies is !prod_sign.
-  #first check to see that it's indeed positive, then check to see that
-  maximum_exceeded = (~adj_exp_sum[msb]) & (~prod_sign) & (adj_exp_sum > Wire(max_biased_exp(bits_out), tracked_biased_width)) |
-                     (~adj_exp_sum[msb]) & (prod_sign)  & (adj_exp_sum > Wire(max_biased_exp(bits_out) - 1, tracked_biased_width))
-
-  output_bits = regime_bits(bits_out)
-
-  #create a panel of substitute values ready to go.
-  clipping_value = Wire(output_bits)
-  clipping_value[msb:1v] = Wire(max_biased_exp(bits_in) - 1, output_bits)[msb:1v] & ((output_bits - 1) * maximum_exceeded)
-  clipping_value[0] = ~prod_sign
-
-  do_exp_clipping = minimum_exceeded | maximum_exceeded
-
-  exp_sum = Wire(do_exp_clipping,
-    adj_exp_sum[range(output_bits)] & (output_bits * ~do_exp_clipping) |
-    (clipping_value & (output_bits * do_exp_clipping))
-    )
 end
 
 doc"""
@@ -214,11 +191,9 @@ doc"""
 
   extended_prod_exp = mul_exp_sum(prod_sgn, lhs_exp, rhs_exp, multiplied_frac[msb:(msb-1)v], bits_in, bits_out)
 
-  #it's possible that we'll need to clear the fraction due to the exponent being
-  #extreme.
-  prod_frac = ((bits_out - 1) * ~extended_prod_exp[msb]) & provisional_prod_frac
+  prod_expfrac = exp_trim(prod_sgn, extended_prod_exp, provisional_prod_frac, bits_out, 2)
 
-  eproduct = Wire(prod_inf, prod_zer, prod_sgn, extended_prod_exp[(msb-1):0v], prod_frac)
+  eproduct = Wire(prod_inf, prod_zer, prod_sgn, prod_expfrac)
 
   eproduct
 end

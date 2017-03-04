@@ -1,26 +1,31 @@
 
 doc"""
   `add_shift_value(shift_onehot, bits)`
-  converts a one-hot representation of the shift value to a binary summary:
+  converts a one-hot representation of the shift value to a binary difference:
 
-  | left_shift? | right_shift? | MSB    ...exp_diff...    LSB |
-  |    1 bit    |    1 bit     |      esize(bits)+1 bits      |
+  | MSB    ...exp_diff...    LSB |
+  |      esize(bits)+1 bits      |
 
   NB: this may be replaced by a direct encoding algorithm.
 """
-@verilog function add_shift_value(shift_onehot::Wire, bits)
+@verilog function add_shift_diff(shift_onehot::Wire, bits)
   @suffix                 "$(bits)bit"
   @input shift_onehot     range(bits-1)
   #biased one-hot-shift:  0 - shift left one
   #                       1 - no shift
   #                       2 - shift right one
 
-  left_shift = shift_onehot[0]
-  right_shift = |(shift_onehot[msb:2v])
+  exponent_delta = Wire(regime_bits(bits) + 1)
+  #exponent_delta[0] is special.
+  exponent_delta[0] = |([shift_onehot(idx) for idx in range(bits-1) if iseven(idx)])
 
-  for idx = 1:
+  for idx in 1:regime_bits(bits)
+    #populate the appropriate value from the one-hot lines.  This should be a
+    #binary version of the negative one-hot value.
+    exponent_delta[idx] = |(shift_onehot(jdx) for jdx in 1:(bits-2) if bitof(-jdx, idx)))
+  end
 
-
+  exponent_delta[msb] = ~(shift_onehot[0] | shift_onehot[1])
 end
 
 @verilog function add_apply_shift(fraction::Wire, shift_onehot::Wire, bits)
@@ -37,7 +42,7 @@ end
   #set up a shifted fraction result.
   shifted_fraction = Wire(bits-3)
   #all the other cases are right-shifted.  Amount specified by index.
-  for idx = 0:...
+  for idx in range(bits-3)
     #pseudocode
     #shifted[0] = left_shifted[0] | fraction[0] & shift_onehot[1]
     #shifted[1] = left_shifted[1] | (fraction[1] & shift_onehot[1]) | (fraction[0] & shift_onehot[2])
@@ -165,6 +170,8 @@ end
   #the provisional sum combines the exponent and fraction parts and are selected
   #the validity of the value.
   provisional_sum = parallel_universe_lhs_dom[(msb-1):0v] | parallel_universe_rhs_dom[(msb-1):0v]
+  provisional_frc = provisional_sum[(bits-1):0v]
+  provisional_exp = provisional_sum[(msb-1):bits]
 
   #we can extract the top bit from the provisional sum to determine the sign in
   #the case that the exponents were the same.
@@ -174,6 +181,17 @@ end
 
   #extract a one-hot shift analysis from the provisional sum.
   frc_shift_onehot = add_shift_onehot(sum_sgn, provisional_sum[(bits-1):1v], bits)
+
+  #shift the fraction
+  sum_frc_untrimmed = add_apply_shift(shift_onehot, bits)
+
+  sum_exp_diff = add_shift_diff(shift_onehot, bits)
+
+  sum_exp_untrimmed = add_exp_diff(sum_exp, sum_exp_diff, bits)
+
+  #trim with a padding of one.
+  sum_expfrc_trimmed = exp_trim(sum_exp_untrimmed, sum_frc_untrimmed, bits, 1)
+
 end
 
 
