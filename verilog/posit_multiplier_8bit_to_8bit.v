@@ -7,7 +7,6 @@ module posit_extended_multiplier_8bit_to_8bit(
   input [11:0] rhs,
   output [13:0] eproduct);
 
-  wire [6:0] prod_frac;
   wire [3:0] lhs_exp;
   wire lhs_inf;
   wire lhs_zer;
@@ -19,10 +18,11 @@ module posit_extended_multiplier_8bit_to_8bit(
   wire rhs_sgn;
   wire [3:0] rhs_exp;
   wire [4:0] lhs_frac;
-  wire [4:0] extended_prod_exp;
+  wire [5:0] extended_prod_exp;
   wire prod_inf;
   wire [12:0] multiplied_frac;
   wire prod_sgn;
+  wire [10:0] prod_expfrac;
   wire prod_zer;
 
   mul_frac_8bit mul_frac_8bit_multiplied_frac(
@@ -41,7 +41,13 @@ module posit_extended_multiplier_8bit_to_8bit(
     .lhs_exp (lhs_exp),
     .rhs_exp (rhs_exp),
     .frac_adjustment (multiplied_frac[12:11]),
-    .exp_sum (extended_prod_exp));
+    .adj_exp_sum (extended_prod_exp));
+
+  exp_trim_8bit_2pad_gs exp_trim_8bit_2pad_gs_prod_expfrac(
+    .sign (prod_sgn),
+    .exp_untrimmed (extended_prod_exp),
+    .frc_untrimmed (provisional_prod_frac[6:0]),
+    .expfrac (prod_expfrac));
 
   assign lhs_inf = lhs[11];
   assign lhs_zer = lhs[10];
@@ -56,8 +62,7 @@ module posit_extended_multiplier_8bit_to_8bit(
   assign prod_inf = (lhs_inf | rhs_inf);
   assign prod_zer = (lhs_zer | rhs_zer);
   assign prod_sgn = (lhs_sgn ^ rhs_sgn);
-  assign prod_frac = ({7{~(extended_prod_exp[4])}} & provisional_prod_frac);
-  assign eproduct = {prod_inf,prod_zer,prod_sgn,extended_prod_exp[3:0],prod_frac};
+  assign eproduct = {prod_inf,prod_zer,prod_sgn,prod_expfrac};
 endmodule
 
 
@@ -123,27 +128,44 @@ module mul_exp_sum(
   input [3:0] lhs_exp,
   input [3:0] rhs_exp,
   input [1:0] frac_adjustment,
-  output [4:0] exp_sum);
+  output [5:0] adj_exp_sum);
 
   wire [5:0] dual_exp_sum;
-  wire do_exp_clipping;
-  wire [3:0] clipping_value;
-  wire [5:0] adj_exp_sum;
   wire [5:0] lhs_exp_sum;
-  wire maximum_exceeded;
-  wire minimum_exceeded;
   wire [5:0] bias_wire;
 
   assign bias_wire = 6'b111001;
   assign lhs_exp_sum = (bias_wire + {2'b00,lhs_exp});
   assign dual_exp_sum = (lhs_exp_sum + {2'b00,rhs_exp});
   assign adj_exp_sum = (dual_exp_sum + {4'b0000,frac_adjustment});
-  assign minimum_exceeded = (adj_exp_sum[5] | (~(prod_sign) & (adj_exp_sum == 6'b000000)));
-  assign maximum_exceeded = (((~(adj_exp_sum[5]) & ~(prod_sign)) & (adj_exp_sum > 6'b001101)) | ((~(adj_exp_sum[5]) & prod_sign) & (adj_exp_sum > 6'b001100)));
-  assign clipping_value[3:1] = ({3'b110} & {3{maximum_exceeded}});
-  assign clipping_value[0] = ~(prod_sign);
-  assign do_exp_clipping = (minimum_exceeded | maximum_exceeded);
-  assign exp_sum = {do_exp_clipping,((adj_exp_sum[3:0] & {4{~(do_exp_clipping)}}) | (clipping_value & {4{do_exp_clipping}}))};
+endmodule
+
+
+module exp_trim_8bit_2pad_gs(
+  input sign,
+  input [5:0] exp_untrimmed,
+  input [6:0] frc_untrimmed,
+  output [10:0] expfrac);
+
+  wire do_exp_clipping;
+  wire [5:0] positive_limit_exp;
+  wire [3:0] clipping_value;
+  wire [6:0] frc_trimmed;
+  wire [3:0] exp_trimmed;
+  wire overflowed;
+  wire [5:0] negative_limit_exp;
+  wire underflowed;
+
+  assign positive_limit_exp = 6'b001101;
+  assign negative_limit_exp = 6'b001100;
+  assign underflowed = (exp_untrimmed[5] | (~(sign) & ~(|(exp_untrimmed))));
+  assign overflowed = (((~(exp_untrimmed[5]) & ~(sign)) & (exp_untrimmed > positive_limit_exp)) | ((~(exp_untrimmed[5]) & sign) & (exp_untrimmed > negative_limit_exp)));
+  assign clipping_value[3:1] = ({3'b110} & {3{overflowed}});
+  assign clipping_value[0] = ~(sign);
+  assign do_exp_clipping = (underflowed | overflowed);
+  assign exp_trimmed = ((exp_untrimmed[3:0] & {4{~(do_exp_clipping)}}) | (clipping_value & {4{do_exp_clipping}}));
+  assign frc_trimmed = ((frc_untrimmed[6:0] & {7{(~((overflowed | underflowed)) | (overflowed ^ sign))}}) | {7{((overflowed | underflowed) & (overflowed ^ sign))}});
+  assign expfrac = {exp_trimmed,frc_trimmed};
 endmodule
 
 

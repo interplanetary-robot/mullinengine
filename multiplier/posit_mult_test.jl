@@ -81,8 +81,6 @@ println("OK.")
 
 #do the actual multiplication testing.
 
-println("-------")
-
 using SigmoidNumbers
 
 function test_8bit_mul()
@@ -134,5 +132,3 @@ function test_16bit_mul()
   end
   println("OK!")
 end
-
-#test_16bit_mul()

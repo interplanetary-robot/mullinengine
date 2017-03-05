@@ -1,7 +1,7 @@
 #exp_trim.v.jl - implements trimming of expanded values
 
 doc"""
-  exp_trim(sign::SingleWire, exp_untrimmed::Wire, frc_untrimmed::Wire)
+  exp_trim(sign::SingleWire, exp_untrimmed::Wire, frc_untrimmed::Wire, bits::Integer, pad::Integer, guardshift::Symbol = Symbol(""))
 
   takes a (potentially negative) untrimmed exponent value.  This value should be
   padded with at least 1 bit.  The result will be a fused exp-frac value that
@@ -15,17 +15,20 @@ doc"""
   will be 1 for addition (because the maximum sum will be one more than the
   maximum exponent, which less than 2^bits-1).
 """
-@verilog function exp_trim(sign::SingleWire, exp_untrimmed::Wire, frc_untrimmed::Wire, bits::Integer, pad::Integer)
+@verilog function exp_trim(sign::SingleWire, exp_untrimmed::Wire, frc_untrimmed::Wire, bits::Integer, pad::Integer, guardshift::Symbol)
   @assert pad >= 1
   @assert ispow2(bits)
 
-  @suffix               "$(bits)bit_$(pad)pad"
+  #see posit-facts.jl for the gsstring() function
+  @suffix               "$(bits)bit_$(pad)pad$(gsstring(guardshift))"
+
   @input exp_untrimmed  range(regime_bits(bits) + pad)
-  @input frc_untrimmed  range(bits - 3)
+  @input frc_untrimmed  range(bits - (guardshift == :gs ? 1 : 3))
 
   #create some invariant values.
   upper_limit_value = max_biased_exp(bits)
   expbits = regime_bits(bits)
+  frcbits = bits - (guardshift == :gs ? 1 : 3)
 
   #store these as "constant wires" (for now.  When we have ES, then these will
   #not necessarily be constant anymore).
@@ -84,9 +87,9 @@ doc"""
   #     F            F         F       F
   #boolean formula:  (o | u) & (o ^ s)
 
-  frc_trimmed = (frc_untrimmed[range(bits-3)] &
-                  ((bits-3) * (~(overflowed | underflowed) | (overflowed ^ sign)))) |
-                  ((bits-3) * ( (overflowed | underflowed) & (overflowed ^ sign)))
+  frc_trimmed = (frc_untrimmed[range(frcbits)] &
+                  (frcbits * (~(overflowed | underflowed) | (overflowed ^ sign)))) |
+                  (frcbits * ( (overflowed | underflowed) & (overflowed ^ sign)))
 
   expfrac = Wire(exp_trimmed, frc_trimmed)
 end
