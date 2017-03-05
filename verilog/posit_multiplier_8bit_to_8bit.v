@@ -43,7 +43,7 @@ module posit_extended_multiplier_8bit_to_8bit(
     .frac_adjustment (multiplied_frac[12:11]),
     .adj_exp_sum (extended_prod_exp));
 
-  exp_trim_8bit_2pad_gs exp_trim_8bit_2pad_gs_prod_expfrac(
+  exp_trim_8bit_mul exp_trim_8bit_mul_prod_expfrac(
     .sign (prod_sgn),
     .exp_untrimmed (extended_prod_exp),
     .frc_untrimmed (provisional_prod_frac[6:0]),
@@ -108,6 +108,34 @@ module mul_frac_8bit(
 endmodule
 
 
+module exp_trim_8bit_mul(
+  input sign,
+  input [5:0] exp_untrimmed,
+  input [6:0] frc_untrimmed,
+  output [10:0] expfrac);
+
+  wire do_exp_clipping;
+  wire [5:0] positive_limit_exp;
+  wire [3:0] clipping_value;
+  wire [6:0] frc_trimmed;
+  wire [3:0] exp_trimmed;
+  wire overflowed;
+  wire [5:0] negative_limit_exp;
+  wire underflowed;
+
+  assign positive_limit_exp = 6'b001101;
+  assign negative_limit_exp = 6'b001100;
+  assign underflowed = (exp_untrimmed[5] | (~(sign) & ~(|(exp_untrimmed))));
+  assign overflowed = (((~(exp_untrimmed[5]) & ~(sign)) & (exp_untrimmed > positive_limit_exp)) | ((~(exp_untrimmed[5]) & sign) & (exp_untrimmed > negative_limit_exp)));
+  assign clipping_value[3:1] = ({3'b110} & {3{overflowed}});
+  assign clipping_value[0] = ~(sign);
+  assign do_exp_clipping = (underflowed | overflowed);
+  assign exp_trimmed = ((exp_untrimmed[3:0] & {4{~(do_exp_clipping)}}) | (clipping_value & {4{do_exp_clipping}}));
+  assign frc_trimmed = ((frc_untrimmed[6:0] & {7{(~((overflowed | underflowed)) | (overflowed ^ sign))}}) | {7{((overflowed | underflowed) & (overflowed ^ sign))}});
+  assign expfrac = {exp_trimmed,frc_trimmed};
+endmodule
+
+
 module mul_frac_trimmer_8bit_to_8bit(
   input [10:0] untrimmed_fraction,
   output [6:0] trimmed_frac);
@@ -138,34 +166,6 @@ module mul_exp_sum(
   assign lhs_exp_sum = (bias_wire + {2'b00,lhs_exp});
   assign dual_exp_sum = (lhs_exp_sum + {2'b00,rhs_exp});
   assign adj_exp_sum = (dual_exp_sum + {4'b0000,frac_adjustment});
-endmodule
-
-
-module exp_trim_8bit_2pad_gs(
-  input sign,
-  input [5:0] exp_untrimmed,
-  input [6:0] frc_untrimmed,
-  output [10:0] expfrac);
-
-  wire do_exp_clipping;
-  wire [5:0] positive_limit_exp;
-  wire [3:0] clipping_value;
-  wire [6:0] frc_trimmed;
-  wire [3:0] exp_trimmed;
-  wire overflowed;
-  wire [5:0] negative_limit_exp;
-  wire underflowed;
-
-  assign positive_limit_exp = 6'b001101;
-  assign negative_limit_exp = 6'b001100;
-  assign underflowed = (exp_untrimmed[5] | (~(sign) & ~(|(exp_untrimmed))));
-  assign overflowed = (((~(exp_untrimmed[5]) & ~(sign)) & (exp_untrimmed > positive_limit_exp)) | ((~(exp_untrimmed[5]) & sign) & (exp_untrimmed > negative_limit_exp)));
-  assign clipping_value[3:1] = ({3'b110} & {3{overflowed}});
-  assign clipping_value[0] = ~(sign);
-  assign do_exp_clipping = (underflowed | overflowed);
-  assign exp_trimmed = ((exp_untrimmed[3:0] & {4{~(do_exp_clipping)}}) | (clipping_value & {4{do_exp_clipping}}));
-  assign frc_trimmed = ((frc_untrimmed[6:0] & {7{(~((overflowed | underflowed)) | (overflowed ^ sign))}}) | {7{((overflowed | underflowed) & (overflowed ^ sign))}});
-  assign expfrac = {exp_trimmed,frc_trimmed};
 endmodule
 
 

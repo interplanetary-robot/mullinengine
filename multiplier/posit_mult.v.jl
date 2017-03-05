@@ -191,7 +191,7 @@ doc"""
 
   extended_prod_exp = mul_exp_sum(prod_sgn, lhs_exp, rhs_exp, multiplied_frac[msb:(msb-1)v], bits_in, bits_out)
 
-  prod_expfrac = exp_trim(prod_sgn, extended_prod_exp, provisional_prod_frac[msb:0v], bits_out, 2, :gs)
+  prod_expfrac = exp_trim(prod_sgn, extended_prod_exp, provisional_prod_frac[msb:0v], bits_out, :mul)
 
   eproduct = Wire(prod_inf, prod_zer, prod_sgn, prod_expfrac)
 

@@ -17,15 +17,17 @@ doc"""
 
   exponent_delta = Wire(regime_bits(bits) + 1)
   #exponent_delta[0] is special.
-  exponent_delta[0] = |([shift_onehot(idx) for idx in range(bits-1) if iseven(idx)])
+  exponent_delta[0] = |(Wire([shift_onehot[idx] for idx in range(bits-1) if iseven(idx)]...))
 
-  for idx in 1:regime_bits(bits)
+  for idx in 1:(regime_bits(bits)-1)
     #populate the appropriate value from the one-hot lines.  This should be a
     #binary version of the negative one-hot value.
-    exponent_delta[idx] = |(shift_onehot(jdx) for jdx in 1:(bits-2) if bitof(-jdx, idx)))
+    exponent_delta[idx] = |(Wire([shift_onehot[jdx + 1] for jdx in 1:(bits-3) if bitof(-jdx, idx)]...))
   end
 
   exponent_delta[msb] = ~(shift_onehot[0] | shift_onehot[1])
+
+  exponent_delta
 end
 
 @verilog function add_apply_shift(fraction::Wire, shift_onehot::Wire, bits)
@@ -36,19 +38,17 @@ end
   #                       1 - no shift
   #                       2 - shift right one
 
-  #special case for the shift line zero.
-  left_shifted = fraction[(msb-1):2] & ((bits-3) * shift_onehot[0])
-
   #set up a shifted fraction result.
   shifted_fraction = Wire(bits-3)
   #all the other cases are right-shifted.  Amount specified by index.
-  for idx in range(bits-3)
-    #pseudocode
-    #shifted[0] = left_shifted[0] | fraction[0] & shift_onehot[1]
-    #shifted[1] = left_shifted[1] | (fraction[1] & shift_onehot[1]) | (fraction[0] & shift_onehot[2])
-    #shifted[2] = left_shifted[2] | (fraction[2] & shift_onehot[1]) | (fraction[1] & shift_onehot[1]) | (fraction[0] & shift_onehot[2])
-    #shifted[idx] = |(left_shifted[idx], fraction[j = 0..idx-1] & shift_onehot[1 + idx - j])
-    shifted_fraction[idx] = |(Wire(left_shifted[idx], [fraction[j] & shift_onehot[1 + idx - j] for j in range(idx)]...))
+
+  #basic outline:
+  #shifted_fraction[0] = (shift_onehot[0] & fraction[1]) | (shift_onehot[1] & fraction[0])
+  #shifted_fraction[1] = (shift_onehot[0] & fraction[2]) | (shift_onehot[1] & fraction[1]) | (shift_onehot[2] & fraction[0])
+  #shifted_fraction[2] = (shift_onehot[0] & fraction[3]) | (shift_onehot[1] & fraction[2]) | (shift_onehot[2] & fraction[1]) | (shift_onehot[3] & fraction[0])
+
+  for idx in 1:bits-4
+    shifted_fraction[idx] = |(Wire([shift_onehot[jdx] & fraction[idx + 1 - jdx] for jdx = 0:idx+1]...))
   end
 
   shifted_fraction
@@ -71,7 +71,7 @@ doc"""
   @suffix                      "$(bits)bit"
   @input provisional_sum_frac  range(bits-1)
 
-  sumvalue = provisional_sum_frac ^ (bits * sign)
+  sumvalue = provisional_sum_frac ^ ((bits - 1) * sign)
 
   leading_onehot = Wire(bits-1)
   #generates a one-hot encoding of the number of leading bits.
@@ -81,9 +81,8 @@ doc"""
   #lcount_lines[3] = ~(|(sumvalue[msb], sumvalue[msb-1], sumvalue[msb-2])) & sumvalue[msb-3]
   leading_onehot[0] = sumvalue[msb]
   for idx in 1:bits-2
-    leading_onehot[idx] = ~(|(Wire([sumvalue[msb-j] for j in range(idx)]))) & sumvalue[msb-3]
+    leading_onehot[idx] = ~(|(Wire([sumvalue[msb-j] for j in range(idx)]...))) & sumvalue[msb-idx]
   end
-
   leading_onehot
 end
 
@@ -113,7 +112,7 @@ end
 end
 
 
-@verilog function add_zero_checker(lhs_sgn::SingleWire, lhs_exp::Wire, lhs_frac::Wire rhs_sgn::SingleWire, rhs_exp::Wire, rhs_frac::Wire, bits::Integer)
+@verilog function add_zero_checker(lhs_sgn::SingleWire, lhs_exp::Wire, lhs_frac::Wire, rhs_sgn::SingleWire, rhs_exp::Wire, rhs_frac::Wire, bits::Integer)
   @suffix             "$(bits)bit"
   @input lhs_exp      range(eposit_size(bits_in) - 3)
   @input rhs_exp      range(eposit_size(bits_in) - 3)
@@ -159,8 +158,8 @@ end
   lhs_aug_frac = Wire(lhs_sgn, ~lhs_sgn, lhs_frac, Wire(false))
   rhs_aug_frac = Wire(rhs_sgn, ~rhs_sgn, rhs_frac, Wire(false))
 
-  parallel_universe_lhs_dom = add_theoretical(lhs_exp, lhs_aug_frac, rhs_exp rhs_aug_frac, bits)
-  parallel_universe_rhs_dom = add_theoretical(rhs_exp, rhs_aug_frac, lhs_exp lhs_aug_frac, bits)
+  parallel_universe_lhs_dom = add_theoretical(lhs_exp, lhs_aug_frac, rhs_exp, rhs_aug_frac, bits)
+  parallel_universe_rhs_dom = add_theoretical(rhs_exp, rhs_aug_frac, lhs_exp, lhs_aug_frac, bits)
 
   #the top bit of the "provisional sum" says whether this exponent wound up negative,
   #so we should mix that in with the "other" sign.  It's possible that this is zero
@@ -190,7 +189,7 @@ end
   sum_exp_untrimmed = add_exp_diff(sum_exp, sum_exp_diff, bits)
 
   #trim with a padding of one.
-  sum_expfrc_trimmed = exp_trim(sum_exp_untrimmed, sum_frc_untrimmed, bits, 1)
+  sum_expfrc_trimmed = exp_trim(sum_exp_untrimmed, sum_frc_untrimmed, bits, :add)
 
 end
 

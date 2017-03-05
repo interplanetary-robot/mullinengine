@@ -1,34 +1,30 @@
 #exp_trim.v.jl - implements trimming of expanded values
 
+const exp_padding = Dict(:add => 1, :mul => 2)
+const frc_gsextra = Dict(:add => 0, :mul => 2)
+
 doc"""
   exp_trim(sign::SingleWire, exp_untrimmed::Wire, frc_untrimmed::Wire, bits::Integer, pad::Integer, guardshift::Symbol = Symbol(""))
 
   takes a (potentially negative) untrimmed exponent value.  This value should be
   padded with at least 1 bit.  The result will be a fused exp-frac value that
-  is appropriately trimmed down.  You should set "pad" to be a value that makes
-  sense relative to how many bits you expect the exponent to be able to achieve,
-  plus one, so that negative representations can be easily distinguished from
-  positive representations.
+  is appropriately trimmed down.
 
-  Rules of thumb:  Pad will be 2 for multiplication (because the maximum product
-  will be twice the maximum exponent, which saturates the exponent bits).  Pad
-  will be 1 for addition (because the maximum sum will be one more than the
-  maximum exponent, which less than 2^bits-1).
+  for addition       (mode :add), padding: 1 bit,  no guard/shift
+  for multiplication (mode :mul), padding: 2 bits, +guard/shift
 """
-@verilog function exp_trim(sign::SingleWire, exp_untrimmed::Wire, frc_untrimmed::Wire, bits::Integer, pad::Integer, guardshift::Symbol)
-  @assert pad >= 1
+@verilog function exp_trim(sign::SingleWire, exp_untrimmed::Wire, frc_untrimmed::Wire, bits::Integer, mode::Symbol)
   @assert ispow2(bits)
+  @suffix               "$(bits)bit_$(mode)"
 
-  #see posit-facts.jl for the gsstring() function
-  @suffix               "$(bits)bit_$(pad)pad$(gsstring(guardshift))"
-
-  @input exp_untrimmed  range(regime_bits(bits) + pad)
-  @input frc_untrimmed  range(bits - (guardshift == :gs ? 1 : 3))
+  @input exp_untrimmed  range(regime_bits(bits) + exp_padding[mode])
+  @input frc_untrimmed  range(bits - 3          + frc_gsextra[mode])
 
   #create some invariant values.
   upper_limit_value = max_biased_exp(bits)
   expbits = regime_bits(bits)
-  frcbits = bits - (guardshift == :gs ? 1 : 3)
+  frcbits = bits - 3 + frc_gsextra[mode]
+  pad = exp_padding[mode]
 
   #store these as "constant wires" (for now.  When we have ES, then these will
   #not necessarily be constant anymore).
