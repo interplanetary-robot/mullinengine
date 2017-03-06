@@ -68,13 +68,13 @@ doc"""
   |  1 bit  |  1 bit   |        (bits - 3) bits                | 1 bit |  1 bit  |
 
 """
-@verilog function enc_efrac_gs(sign::SingleWire, inv::SingleWire, frac::Wire, guard::SingleWire, summary::SingleWire, bits::Integer)
-  @suffix                           "$(bits)bit"
-  @input frac                        range(bits - 3)
+@verilog function enc_efrac(sign::SingleWire, inv::SingleWire, frac::Wire, bits::Integer)
+  @suffix                           "$(bits)bit_$(mode)"
+  @input frac                        range(bits - 1)
 
   leading_bits = xorxnor(Wire(sign, inv))
 
-  efrac_gs = Wire(leading_bits[0], leading_bits[1], frac, guard, summary)
+  efrac_gs = Wire(leading_bits[0], leading_bits[1], frac)
 end
 
 doc"""
@@ -148,38 +148,35 @@ doc"""
 end
 
 doc"""
-  encode_posit(eposit::Wire, guard::SingleWire, summary::SingleWire, bits)
+  encode_posit(eposit::Wire, bits)
 
-  converts an extended posit (plus extra information) into a rounded posit
+  converts an extended posit (plus guard and summary bits) into a rounded posit
   in the canonical form.
 
   extended posit format:
 
-  | inf_bit | zer_bit | sgn_bit | MSB  ...regime... LSB | MSB ...exp/frac... LSB |
-  |  1 bit  |  1 bit  |  1 bit  |  log2(bits) + 1 bits  |     (bits - 3) bits    |
+  | inf_bit | zer_bit | sgn_bit | MSB  ...regime... LSB | MSB ...exp/frac... LSB | guard | summary |
+  |  1 bit  |  1 bit  |  1 bit  |  log2(bits) + 1 bits  |     (bits - 3) bits    | 1 bit |  1 bit  |
 
   the guard bit should be a value which represents what the next "bit" should be;
   the summary bit should be a value which represents |((lsb+2):∞); aka if ANY
   of the following bits are theoretically nonzero
-
-  NB:  Future versions of this may implement alternative rounding modes.  Future
-  versions may also allow you to omit "guard" and "summary" bits as "optionalwires"
-  which will result in simpler wiring for specific applications.
 """
-@verilog function encode_posit(eposit::Wire, guard::SingleWire, summary::SingleWire, bits::Integer)
+@verilog function encode_posit(eposit::Wire, bits::Integer)
   @suffix                         "$(bits)bit"
-  @input eposit                   range(bits + regime_bits(bits))
+  @input eposit                   range(bits + regime_bits(bits) + 2)
 
   rbits = regime_bits(bits)
-  totalbits = bits + rbits
 
-  shift_bin = enc_shift_bin(eposit[(totalbits-4):(bits-3)v], bits)
+  shift_bin = enc_shift_bin(eposit[(msb-3):(msb-2-rbits)v], bits)
 
   regime_onehot = enc_regime_onehot(shift_bin[(rbits-2):0v], bits)
 
-  efrac_gs = enc_efrac_gs(eposit[totalbits - 3], shift_bin[rbits - 1], eposit[(bits-4):0v], guard, summary, bits)
+  efrac_src = eposit[(bits-2):0v]
+
+  efrac_gs = enc_efrac(eposit[msb-2], shift_bin[rbits - 1], efrac_src, bits)
 
   shifted_frac_gs = enc_shifted_frac_gs(regime_onehot, efrac_gs, bits)
 
-  posit = enc_finalizer(eposit[totalbits - 1], eposit[totalbits - 2], eposit[totalbits - 3], shifted_frac_gs, bits)
+  posit = enc_finalizer(eposit[msb], eposit[msb - 1], eposit[msb - 2], shifted_frac_gs, bits)
 end

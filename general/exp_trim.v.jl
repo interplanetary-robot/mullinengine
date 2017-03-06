@@ -1,29 +1,29 @@
 #exp_trim.v.jl - implements trimming of expanded values
 
 const exp_padding = Dict(:add => 1, :mul => 2)
-const frc_gsextra = Dict(:add => 0, :mul => 2)
 
 doc"""
   exp_trim(sign::SingleWire, exp_untrimmed::Wire, frc_untrimmed::Wire, bits::Integer, pad::Integer, guardshift::Symbol = Symbol(""))
 
   takes a (potentially negative) untrimmed exponent value.  This value should be
   padded with at least 1 bit.  The result will be a fused exp-frac value that
-  is appropriately trimmed down.
+  is appropriately trimmed down.  frc_untrimmed should have both guard and
+  summary bits appended.
 
-  for addition       (mode :add), padding: 1 bit,  no guard/shift
-  for multiplication (mode :mul), padding: 2 bits, +guard/shift
+  for addition       (mode :add), padding: 1 bit
+  for multiplication (mode :mul), padding: 2 bits
 """
 @verilog function exp_trim(sign::SingleWire, exp_untrimmed::Wire, frc_untrimmed::Wire, bits::Integer, mode::Symbol)
   @assert ispow2(bits)
   @suffix               "$(bits)bit_$(mode)"
 
   @input exp_untrimmed  range(regime_bits(bits) + exp_padding[mode])
-  @input frc_untrimmed  range(bits - 3          + frc_gsextra[mode])
+  @input frc_untrimmed  range(bits - 1)
 
   #create some invariant values.
   upper_limit_value = max_biased_exp(bits)
   expbits = regime_bits(bits)
-  frcbits = bits - 3 + frc_gsextra[mode]
+  frcbits = bits - 1
   pad = exp_padding[mode]
 
   #store these as "constant wires" (for now.  When we have ES, then these will

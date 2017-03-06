@@ -158,10 +158,12 @@ doc"""
 end
 
 doc"""
-  posit_multiplier(Wire, Wire, bits_in, bits_out)
+  posit_extended_multiplier(lhs, rhs, bits_in, bits_out)
 
-  a generated, unpipelined posit multiplier that takes a certain number of bits
-  in and outputs a certain number of bits out.
+  a generated, unpipelined posit multiplier that takes an expanded posit
+  corresponding to the bits_in size and outputs the result in the form of an
+  expanded posit correpsonding to the bits_out size, plus a guard bit and and
+  an extended summary bit.
 """
 @verilog function posit_extended_multiplier(lhs::Wire, rhs::Wire, bits_in::Integer, bits_out::Integer)
   @assert bits_in <= bits_out
@@ -199,6 +201,10 @@ doc"""
 end
 
 @verilog function posit_multiplier(lhs::Wire, rhs::Wire, bits_in::Integer, bits_out::Integer)
+
+  @assert ispow2(bits_in)
+  @assert ispow2(bits_out)
+
   @suffix "$(bits_in)bit_to_$(bits_out)bit"
   @input lhs range(bits_in)                  #decare that lhs and rhs
   @input rhs range(bits_in)                  #decare that lhs and rhs
@@ -209,7 +215,7 @@ end
 
   mul_result_extended = posit_extended_multiplier(lhs_extended, rhs_extended, bits_in, bits_out)
 
-  mul_result = encode_posit(mul_result_extended[msb:2v], mul_result_extended[1], mul_result_extended[0], bits_out)
+  mul_result = encode_posit(mul_result_extended[msb:0v], bits_out)
 
   mul_result
 end
