@@ -8,7 +8,7 @@ include("./encoder/posit_encode.v.jl")
 include("./multiplier/posit_mult.v.jl")
 include("./adder/posit_add.v.jl")
 
-#@test posit_adder(0x05, 0x60, 8) == 0x61
+@test posit_adder(0x81, 0x81, 8) == 0x81
 
 #testing suite
 include("./general/methods_testing.jl")
