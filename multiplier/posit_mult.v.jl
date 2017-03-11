@@ -23,9 +23,9 @@ doc"""
   'provisional fraction' result and reports a fraction value that's got on its
   MSB special instructions on how to augment the exponent.
 """
-@verilog function mul_frac_finisher(final_sign::SingleWire, provisional_fraction::Wire, bits::Integer)
+@verilog function mul_frac_finisher(final_sign::SingleWire, provisional_fraction::Wire, provisional_size::Integer)
   @suffix                               "$(bits)bit"
-  @input provisional_fraction           range(bits*2 - 4)
+  @input provisional_fraction           range(provisional_size)
 
   shift_selector = final_sign ^ provisional_fraction[msb]
 
@@ -33,11 +33,11 @@ doc"""
   exponent_augment[1] = (~(provisional_fraction[msb] | provisional_fraction[msb-1])) & (~final_sign)  #take the top two for this value.
   exponent_augment[0] = shift_selector
 
-  selected_one_shift_fraction = ((bits * 2 - 5) * shift_selector)  & provisional_fraction[(msb-1):0v]
-  selected_two_shift_fraction = ((bits * 2 - 5) * ~shift_selector) & Wire(provisional_fraction[(msb-2):0v], Wire(false))
-  selected_fraction = selected_one_shift_fraction | selected_two_shift_fraction
+  selected_one_shift_fraction = ((provisional_size - 1) * shift_selector)  & provisional_fraction[(msb-1):0v]
+  selected_two_shift_fraction = ((provisional_size - 1) * ~shift_selector) & Wire(provisional_fraction[(msb-2):0v], Wire(false))
+  shifted_fraction = selected_one_shift_fraction | selected_two_shift_fraction
 
-  result = Wire(exponent_augment, selected_fraction)
+  (exponent_augment, shifted_fraction)
 end
 
 doc"""
@@ -90,7 +90,10 @@ doc"""
   frac_result[msb:(bits-3)v] = full_hidden_bit_sum + Wire(Wire(0b00,2), fracmultiply[msb:(bits-3)v])
 
   #amend the fraction so that it's shifted and report whether or not it's been shifted
-  multiplied_frac = mul_frac_finisher(top_hidden_bit, frac_result, bits)
+  (frac_report, shifted_frac) = mul_frac_finisher(top_hidden_bit, frac_result, bits*2 - 4)
+
+  #combine these values(for now)
+  multiplied_frac = Wire(frac_report, shifted_frac)
 end
 
 @verilog function mul_frac_trimmer(untrimmed_fraction::Wire, bits_in::Integer, bits_out::Integer)

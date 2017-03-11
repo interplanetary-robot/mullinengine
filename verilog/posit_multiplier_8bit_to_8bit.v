@@ -78,9 +78,11 @@ module mul_frac_8bit(
   wire [6:0] full_hidden_bit_sum;
   wire next_hidden_bit;
   wire [6:0] rhs_frac_lhs_sign;
+  wire [1:0] frac_report;
   wire [9:0] fracmultiply;
   wire [6:0] lhs_frac_rhs_sign;
   wire [11:0] frac_result;
+  wire [10:0] shifted_frac;
 
   mul_frac_hidden_crossmultiplier_8bit mul_frac_hidden_crossmultiplier_8bit_lhs_frac_rhs_sign(
     .crosssign (rhs_sign),
@@ -92,10 +94,11 @@ module mul_frac_8bit(
     .frac (rhs_frac),
     .result (rhs_frac_lhs_sign));
 
-  mul_frac_finisher_8bit mul_frac_finisher_8bit_multiplied_frac(
+  mul_frac_finisher_bitsbit mul_frac_finisher_bitsbit_frac_report_shifted_frac(
     .final_sign (top_hidden_bit),
     .provisional_fraction (frac_result),
-    .result (multiplied_frac));
+    .exponent_augment (frac_report),
+    .shifted_fraction (shifted_frac));
 
   assign top_hidden_bit = (lhs_sign ^ rhs_sign);
   assign next_hidden_bit = ~((lhs_sign | rhs_sign));
@@ -105,6 +108,7 @@ module mul_frac_8bit(
   assign fracmultiply = (lhs_frac * rhs_frac);
   assign frac_result[4:0] = fracmultiply[4:0];
   assign frac_result[11:5] = (full_hidden_bit_sum + {2'b00,fracmultiply[9:5]});
+  assign multiplied_frac = {frac_report,shifted_frac};
 endmodule
 
 
@@ -187,15 +191,14 @@ module mul_frac_hidden_crossmultiplier_8bit(
 endmodule
 
 
-module mul_frac_finisher_8bit(
+module mul_frac_finisher_bitsbit(
   input final_sign,
   input [11:0] provisional_fraction,
-  output [12:0] result);
+  output [1:0] exponent_augment,
+  output [10:0] shifted_fraction);
 
-  wire [10:0] selected_fraction;
   wire [10:0] selected_two_shift_fraction;
   wire shift_selector;
-  wire [1:0] exponent_augment;
   wire [10:0] selected_one_shift_fraction;
 
   assign shift_selector = (final_sign ^ provisional_fraction[11]);
@@ -203,8 +206,7 @@ module mul_frac_finisher_8bit(
   assign exponent_augment[0] = shift_selector;
   assign selected_one_shift_fraction = ({11{shift_selector}} & provisional_fraction[10:0]);
   assign selected_two_shift_fraction = ({11{~(shift_selector)}} & {provisional_fraction[9:0],1'b0});
-  assign selected_fraction = (selected_one_shift_fraction | selected_two_shift_fraction);
-  assign result = {exponent_augment,selected_fraction};
+  assign shifted_fraction = (selected_one_shift_fraction | selected_two_shift_fraction);
 endmodule
 
 module posit_multiplier_8bit_to_8bit(
@@ -230,9 +232,7 @@ module posit_multiplier_8bit_to_8bit(
     .eproduct (mul_result_extended));
 
   encode_posit_8bit encode_posit_8bit_mul_result(
-    .eposit (mul_result_extended[13:2]),
-    .guard (mul_result_extended[1]),
-    .summary (mul_result_extended[0]),
+    .eposit (mul_result_extended[13:0]),
     .posit (mul_result));
 
 

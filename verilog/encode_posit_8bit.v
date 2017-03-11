@@ -2,18 +2,16 @@
 /* verilator lint_off UNUSED */
 
 
-module enc_efrac_gs_8bit(
+module enc_efrac_8bit(
   input sign,
   input inv,
-  input [4:0] frac,
-  input guard,
-  input summary,
+  input [6:0] frac,
   output [8:0] efrac_gs);
 
   wire [1:0] leading_bits;
 
   assign leading_bits = {^({sign,inv}), ~^({sign,inv})};
-  assign efrac_gs = {leading_bits[0],leading_bits[1],frac,guard,summary};
+  assign efrac_gs = {leading_bits[0],leading_bits[1],frac};
 endmodule
 
 
@@ -97,30 +95,27 @@ module enc_shift_bin_8bit(
 endmodule
 
 module encode_posit_8bit(
-  input [11:0] eposit,
-  input guard,
-  input summary,
+  input [13:0] eposit,
   output [7:0] posit);
 
   wire [3:0] shift_bin;
   wire [8:0] efrac_gs;
+  wire [6:0] efrac_src;
   wire [6:0] regime_onehot;
   wire [8:0] shifted_frac_gs;
 
   enc_shift_bin_8bit enc_shift_bin_8bit_shift_bin(
-    .regime (eposit[8:5]),
+    .regime (eposit[10:7]),
     .shift_bin (shift_bin));
 
   enc_regime_onehot_8bit enc_regime_onehot_8bit_regime_onehot(
     .shift_bin (shift_bin[2:0]),
     .regime_onehot (regime_onehot));
 
-  enc_efrac_gs_8bit enc_efrac_gs_8bit_efrac_gs(
-    .sign (eposit[9]),
+  enc_efrac_8bit enc_efrac_8bit_efrac_gs(
+    .sign (eposit[11]),
     .inv (shift_bin[3]),
-    .frac (eposit[4:0]),
-    .guard (guard),
-    .summary (summary),
+    .frac (efrac_src),
     .efrac_gs (efrac_gs));
 
   enc_shifted_frac_gs_8bit enc_shifted_frac_gs_8bit_shifted_frac_gs(
@@ -129,12 +124,12 @@ module encode_posit_8bit(
     .shifted_frac (shifted_frac_gs));
 
   enc_finalizer_8bit enc_finalizer_8bit_posit(
-    .inf (eposit[11]),
-    .zero (eposit[10]),
-    .sign (eposit[9]),
+    .inf (eposit[13]),
+    .zero (eposit[12]),
+    .sign (eposit[11]),
     .shifted_frac_gs (shifted_frac_gs),
     .posit (posit));
 
-
+  assign efrac_src = eposit[6:0];
 endmodule
 

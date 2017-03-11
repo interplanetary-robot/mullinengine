@@ -69,7 +69,7 @@ doc"""
 
 """
 @verilog function enc_efrac(sign::SingleWire, inv::SingleWire, frac::Wire, bits::Integer)
-  @suffix                           "$(bits)bit_$(mode)"
+  @suffix                           "$(bits)bit"
   @input frac                        range(bits - 1)
 
   leading_bits = xorxnor(Wire(sign, inv))

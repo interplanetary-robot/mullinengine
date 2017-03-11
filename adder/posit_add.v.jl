@@ -134,10 +134,6 @@ end
   @input sub_exp      range(regime_bits(bits))
   @input sub_frac     range(bits)
 
-  #println("--------")
-  #println("dom_frac: ", dom_frac)
-  #println("sub_frac: ", sub_frac)
-
   edom_exp = Wire(Wire(false), dom_exp)
   esub_exp = Wire(Wire(false), sub_exp)
 
@@ -147,8 +143,6 @@ end
 
   shft_sub_frac = add_rightshift(sub_frac, shift, bits)
 
-  #println("ssb_frac: ", shft_sub_frac)
-
   #add the two fractions together.
   sum_frac = Wire(dom_frac, Wire(false)) + shft_sub_frac
 
@@ -156,8 +150,6 @@ end
   #this indicates if the dominant value "won" the sign matchup in the fraction
   #phase of comparison.
   fraction_win = ~(dom_frac[msb] ^ sum_frac[msb])
-
-  #println("sum_frac: ", sum_frac)
 
   #return the values added together in this hypothetical universe concatenated
   #with an indicator telling us if 'this side won'.
@@ -243,9 +235,6 @@ doc"""
   parallel_universe_lhs_dom = add_theoretical(lhs_exp, lhs_aug_frac, rhs_exp, rhs_aug_frac, bits)
   parallel_universe_rhs_dom = add_theoretical(rhs_exp, rhs_aug_frac, lhs_exp, lhs_aug_frac, bits)
 
-#  println("-----------")
-#  println("pul: ",parallel_universe_lhs_dom)
-#  println("pur: ",parallel_universe_rhs_dom)
 
   #the top bit of the "provisional sum" says whether this exponent wound up negative,
   #so we should mix that in with the "other" sign.  It's possible that this is zero
@@ -263,21 +252,13 @@ doc"""
   provisional_frc = provisional_sum[range(bits + 1)]
   provisional_exp = provisional_sum[msb:(bits+1)v]
 
-  #println("sfc: ", sum_frc_sgn)
-
-#  println("provisional_frc: ", provisional_frc)
-  #println("sum_sgn: ", sum_sgn)
 
   #extract a one-hot shift analysis from the provisional sum.
   frc_shift_onehot = add_shift_onehot(sum_sgn, provisional_frc, bits)
 
-#  println("fso: ",frc_shift_onehot)
-
   #shift the fraction.  This is not necessarily the finalized fraction, as the
   #value can be altered by an underflow or overflow process.
   sum_frc_untrimmed = add_apply_shift(provisional_frc, frc_shift_onehot, bits)
-
-#  println("sfu: ", sum_frc_untrimmed)
 
   #calculate the exponent difference that will happen due to a shift.  For
   #addition, this could be no change or +1 due to carry; for subtraction, this
@@ -296,8 +277,6 @@ doc"""
   #zero sum, it'll need to be padded with zero bits for guard and summary.
   posit_sum = (((eposit_size(bits) + 2) * ~zero_sum) & Wire(sum_inf, sum_zer, sum_sgn, sum_expfrc_trimmed)) |
               (((eposit_size(bits) + 2) * zero_sum)  & Wire(zeroed_result, Wire(0b00,2)))
-
-#  println("posit_sum: ", posit_sum)
 
   posit_sum
 end

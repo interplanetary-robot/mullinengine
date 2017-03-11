@@ -27,14 +27,14 @@ println("OK.")
 
 ################################################################################
 # test mul_frac_finisher
-
+#=
 #first, fraction result in 8-bits that doesn't result in a fraction augmentation
 @test mul_frac_finisher(0b0, 0b01_11011_00000, 8) == 0b00_11011_000000
 #a fraction result in 8-bits (positive) that does result in a fraction augmentation
 @test mul_frac_finisher(0b0, 0b10_11011_00000, 8) == 0b01_01101_100000
 #a fraction result in 8-bits (positive) that results in a fraction augentation with a pushed value
 @test mul_frac_finisher(0b0, 0b11_00010_00000, 8) == 0b01_10001_000000
-
+=#
 #negative results
 
 ################################################################################
