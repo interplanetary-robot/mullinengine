@@ -7,35 +7,57 @@ doc"""
   already had its product calculated and completes the process of multiplication
   on this value.
 """
-@verilog function mullin_mul(lhs_s::State, lhs_e::Wire, lhs_f::Wire, rhs_s::State, rhs_e::Wire, rhs_f::Wire, raw_m::Wire, size_in::Integer, size_out::Integer)
+@verilog function mullin_mul(lhs_s::State, lhs_e::Wire, lhs_f::Wire,
+                             rhs_s::State, rhs_e::Wire, rhs_f::Wire,
+                             raw_m::Wire, bits_in::Integer, bits_out::Integer)
+
   @suffix           "$(size_in)_$(size_out)"
-  @input lhs_e      range(regimebits(size_in))
-  @input lhs_f      range(size_in)
-  @input rhs_e      range(regimebits(size_in))
-  @input rhs_f      range(size_in)
-  @input raw_m      range(size_in * size_in)
+  @input lhs_e      range(regime_bits(bits_in))
+  @input lhs_f      range(bits_in)
+  @input rhs_e      range(regime_bits(bits_in))
+  @input rhs_f      range(bits_in)
+  @input raw_m      range(bits_out)
 
-  inp_frac_delta = size_in - 2
+  lhs_sgn = lhs_s[0]
+  rhs_sgn = rhs_s[0]
+  lhs_zer = lhs_s[1]
+  rhs_zer = rhs_s[1]
+  lhs_inf = lhs_s[2]
+  rhs_inf = rhs_s[2]
+
+  inp_frac_delta = bits_in - 4
+
   #set the hidden crossmultiplier values.
-  lhs_frac_rhs_sign = mul_frac_hidden_crossmultiplier(rhs_sign, lhs_frac[msb:(msb-inp_frac_delta)v], bits)
-  rhs_frac_lhs_sign = mul_frac_hidden_crossmultiplier(lhs_sign, rhs_frac[msb:(msb-inp_frac_delta)v], bits)
+  lhs_frac_rhs_sign = mul_frac_hidden_crossmultiplier(rhs_sgn, lhs_f[msb:(msb-inp_frac_delta)v], bits_in)
+  rhs_frac_lhs_sign = mul_frac_hidden_crossmultiplier(lhs_sgn, rhs_f[msb:(msb-inp_frac_delta)v], bits_in)
 
-  #calculate the hidden bits for the multiplied fraction.
-  raw_mult_hidden_bits = Wire(lhs_sign ^ rhs_sign, ~(lhs_sign | rhs_sign), raw_m[msb:(msb - inp_frac_delta)v])
+  #first, create a wire that's the hidden bits merged with the fraction bits.
+  top_hidden_bit = lhs_sgn ^ rhs_sgn
+  next_hidden_bit = ~(lhs_sgn | rhs_sgn)
 
-  #add the hidden bits to the lhs_frac (this is the "first addition")
-  first_addition = raw_mult_hidden_bits + lhs_frac_rhs_sign
-  second_addition = first_addition + rhs_frac_lhs_sign
+  general_mul_result = Wire(top_hidden_bit, next_hidden_bit, raw_m)
+  lhs_sum_result = lhs_frac_rhs_sign + general_mul_result[msb:(msb - inp_frac_delta - 2)v]
+  full_sum_result = Wire(rhs_frac_lhs_sign + lhs_sum_result, general_mul_result[(msb - inp_frac_delta - 3):6v])
 
-  #final fraction result concatenates the rest of the raw multiply result.
-  mul_frac_unshifted = Wire(second_addition, raw_m[msb:(msb - (inp_frac_delta + 1))v])
 
-  mul_shift, mul_frac = mul_frac_finisher(raw_mult_hidden_bits[1], mul_frac_unshifted, bits)
+  #amend the fraction so that it's shifted and report whether or not it's been shifted
+  (frac_report, shifted_frac) = mul_frac_finisher(top_hidden_bit, full_sum_result, bits_in * 2 - 4)
 
-  #TODO: This needs to be cleaned up a bit.
-  multiplied_frac = Wire(mul_shift, mul_frac)
+  provisional_prod_frac = mul_frac_trimmer(shifted_frac[(msb-2):0v], bits_in * 2 - 7, bits_out)
 
+  prod_sgn = lhs_inf | rhs_inf
+  prod_s = Wire(prod_sgn, lhs_zer | rhs_zer, lhs_sgn ^ rhs_sgn)
+
+  extended_prod_exp = mul_exp_sum(prod_sgn, lhs_e, rhs_e, shifted_frac[msb:(msb-1)v], bits_in, bits_out)
+
+  #we may want to do this slightly better in the future.
+  prod_expfrac = exp_trim(prod_sgn, extended_prod_exp, provisional_prod_frac, bits_out, :mul)
+
+  prod_exp = prod_expfrac[msb:(bits_out - 1)v]
+  prod_frc = prod_expfrac[(bits_out - 2):2v]
   
+  #throw this away, for now.
+  prod_gs = prod_expfrac[1:0v]
 
-
+  (prod_s, prod_exp, prod_frc)
 end

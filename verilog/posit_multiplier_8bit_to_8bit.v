@@ -31,7 +31,7 @@ module posit_extended_multiplier_8bit_to_8bit(
     .rhs_frac (rhs_frac),
     .multiplied_frac (multiplied_frac));
 
-  mul_frac_trimmer_8bit_to_8bit mul_frac_trimmer_8bit_to_8bit_provisional_prod_frac(
+  mul_frac_trimmer_11bit_to_8bit mul_frac_trimmer_11bit_to_8bit_provisional_prod_frac(
     .untrimmed_fraction (multiplied_frac[10:0]),
     .trimmed_frac (provisional_prod_frac));
 
@@ -72,14 +72,14 @@ module mul_frac_8bit(
   output [12:0] multiplied_frac);
 
   wire top_hidden_bit;
-  wire [6:0] hidden_bit_lhs_sum;
-  wire [6:0] full_hidden_bit_sum;
+  wire [6:0] lhs_sum_result;
+  wire [9:0] mul_big_frac;
   wire next_hidden_bit;
   wire [6:0] rhs_frac_lhs_sign;
   wire [1:0] frac_report;
-  wire [9:0] fracmultiply;
   wire [6:0] lhs_frac_rhs_sign;
-  wire [11:0] frac_result;
+  wire [11:0] full_sum_result;
+  wire [11:0] general_mul_result;
   wire [10:0] shifted_frac;
 
   mul_frac_hidden_crossmultiplier_8bit mul_frac_hidden_crossmultiplier_8bit_lhs_frac_rhs_sign(
@@ -94,18 +94,16 @@ module mul_frac_8bit(
 
   mul_frac_finisher_bitsbit mul_frac_finisher_bitsbit_frac_report_shifted_frac(
     .final_sign (top_hidden_bit),
-    .provisional_fraction (frac_result),
+    .provisional_fraction (full_sum_result),
     .exponent_augment (frac_report),
     .shifted_fraction (shifted_frac));
 
   assign top_hidden_bit = (lhs_sign ^ rhs_sign);
   assign next_hidden_bit = ~((lhs_sign | rhs_sign));
-  assign hidden_bit_lhs_sum[4:0] = lhs_frac_rhs_sign[4:0];
-  assign hidden_bit_lhs_sum[6:5] = ({top_hidden_bit,next_hidden_bit} + lhs_frac_rhs_sign[6:5]);
-  assign full_hidden_bit_sum = (hidden_bit_lhs_sum + rhs_frac_lhs_sign);
-  assign fracmultiply = (lhs_frac * rhs_frac);
-  assign frac_result[4:0] = fracmultiply[4:0];
-  assign frac_result[11:5] = (full_hidden_bit_sum + {2'b00,fracmultiply[9:5]});
+  assign mul_big_frac = (lhs_frac * rhs_frac);
+  assign general_mul_result = {top_hidden_bit,next_hidden_bit,mul_big_frac};
+  assign lhs_sum_result = (lhs_frac_rhs_sign + general_mul_result[11:5]);
+  assign full_sum_result = {(rhs_frac_lhs_sign + lhs_sum_result),general_mul_result[4:0]};
   assign multiplied_frac = {frac_report,shifted_frac};
 endmodule
 
@@ -138,21 +136,6 @@ module exp_trim_8bit_mul(
 endmodule
 
 
-module mul_frac_trimmer_8bit_to_8bit(
-  input [10:0] untrimmed_fraction,
-  output [6:0] trimmed_frac);
-
-  wire summ_val;
-  wire [4:0] frac_val;
-  wire guard_val;
-
-  assign frac_val = untrimmed_fraction[10:6];
-  assign guard_val = untrimmed_fraction[5];
-  assign summ_val = |(untrimmed_fraction[4:0]);
-  assign trimmed_frac = {frac_val,guard_val,summ_val};
-endmodule
-
-
 module mul_exp_sum(
   input prod_sign,
   input [3:0] lhs_exp,
@@ -168,6 +151,21 @@ module mul_exp_sum(
   assign lhs_exp_sum = (bias_wire + {2'b00,lhs_exp});
   assign dual_exp_sum = (lhs_exp_sum + {2'b00,rhs_exp});
   assign adj_exp_sum = (dual_exp_sum + {4'b0000,frac_adjustment});
+endmodule
+
+
+module mul_frac_trimmer_11bit_to_8bit(
+  input [10:0] untrimmed_fraction,
+  output [6:0] trimmed_frac);
+
+  wire summ_val;
+  wire [4:0] frac_val;
+  wire guard_val;
+
+  assign frac_val = untrimmed_fraction[10:6];
+  assign guard_val = untrimmed_fraction[5];
+  assign summ_val = |(untrimmed_fraction[4:0]);
+  assign trimmed_frac = {frac_val,guard_val,summ_val};
 endmodule
 
 

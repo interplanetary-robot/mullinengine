@@ -63,34 +63,16 @@ doc"""
   top_hidden_bit = lhs_sign ^ rhs_sign
   next_hidden_bit = ~(lhs_sign | rhs_sign)
 
-  #hidden_bit_lhs_sum represents the sum of the hidden bits and the lhs sum, added
-  #sequentially.
-  hidden_bit_lhs_sum = Wire(bits - 1)
-  #the bottom bits of this value should just be copied directly over from the
-  #result of the crossmultiplier, since those will be unaffected by the hidden
-  #bits.
-  hidden_bit_lhs_sum[(msb-2):0v] = lhs_frac_rhs_sign[(msb-2):0v]
-  #the top two bits have to take the sum of the previous results.
-  hidden_bit_lhs_sum[msb:(msb-1)v] = Wire(top_hidden_bit, next_hidden_bit) + lhs_frac_rhs_sign[msb:(msb-1)v]
+  #do the basic binary multiply.
+  mul_big_frac = lhs_frac * rhs_frac
 
-  #full_hidden_bit_sum represents the result of summing all of the hidden bit
-  #components.
-  full_hidden_bit_sum = hidden_bit_lhs_sum + rhs_frac_lhs_sign
-
-  #fracmultiply is the basic result of the binary multiply.
-  fracmultiply = lhs_frac * rhs_frac
-
-  #this is a buffer for storing the temporary result (which may need to be shifted)
-  frac_result = Wire(bits * 2 - 4)
-
-  #the trailing bits of frac_result come exclusively from the direct binary multiply.
-  frac_result[(bits-4):0v] = fracmultiply[(bits-4):0v]
-
-  #add in the sum of the hidden bit products to the leading bits of frac_multiply.
-  frac_result[msb:(bits-3)v] = full_hidden_bit_sum + Wire(Wire(0b00,2), fracmultiply[msb:(bits-3)v])
+  #first, create a wire that's the hidden bits merged with the fraction bits.
+  general_mul_result = Wire(top_hidden_bit, next_hidden_bit, mul_big_frac)
+  lhs_sum_result = lhs_frac_rhs_sign + general_mul_result[msb:(bits-3)v]
+  full_sum_result = Wire(rhs_frac_lhs_sign + lhs_sum_result, general_mul_result[(bits-4):0v])
 
   #amend the fraction so that it's shifted and report whether or not it's been shifted
-  (frac_report, shifted_frac) = mul_frac_finisher(top_hidden_bit, frac_result, bits*2 - 4)
+  (frac_report, shifted_frac) = mul_frac_finisher(top_hidden_bit, full_sum_result, bits*2 - 4)
 
   #combine these values(for now)
   multiplied_frac = Wire(frac_report, shifted_frac)
@@ -98,18 +80,16 @@ end
 
 @verilog function mul_frac_trimmer(untrimmed_fraction::Wire, bits_in::Integer, bits_out::Integer)
   @suffix                           "$(bits_in)bit_to_$(bits_out)bit"
-  @input untrimmed_fraction         ((bits_in-3) * 2:0v)
-  @assert                           bits_in <= bits_out
+  @input untrimmed_fraction         range(bits_in)
 
-  product_size = (bits_in-3) * 2
   output_size = bits_out - 3
 
-  if product_size > output_size
+  if bits_in > output_size
     frac_val = untrimmed_fraction[msb:(msb-(output_size-1))v]
     guard_val = untrimmed_fraction[msb-output_size]
     summ_val = (|)(untrimmed_fraction[(msb-(output_size+1)):0v])
   else
-    padding_zeros = output_size - product_size
+    padding_zeros = output_size - bits_in
     frac_val = Wire(untrimmed_fraction, padding_zeros * Wire(false))
     guard_val = Wire(false)
     summ_val = Wire(false)
@@ -138,7 +118,7 @@ doc"""
 
   #  Use two padding bits because that enables proper tracking of which values
   # are negative-minimal, and which values are
-  tracked_biased_width = max(regime_bits(bits_out), regime_bits(bits_in) + 2)
+  tracked_biased_width = regime_bits(bits_out) + 2
   input_padding = tracked_biased_width - length(lhs_exp)
 
   #set up an initial variable to hold the adjustment value.
@@ -188,7 +168,7 @@ doc"""
   rhs_frac = rhs[range(bits_in-3)]
 
   multiplied_frac = mul_frac(lhs_sgn, lhs_frac, rhs_sgn, rhs_frac, bits_in)
-  provisional_prod_frac = mul_frac_trimmer(multiplied_frac[msb-2:0v], bits_in, bits_out)
+  provisional_prod_frac = mul_frac_trimmer(multiplied_frac[(msb-2):0v], (bits_in * 2 - 5), bits_out)
 
   prod_inf = lhs_inf | rhs_inf
   prod_zer = lhs_zer | rhs_zer
@@ -196,7 +176,7 @@ doc"""
 
   extended_prod_exp = mul_exp_sum(prod_sgn, lhs_exp, rhs_exp, multiplied_frac[msb:(msb-1)v], bits_in, bits_out)
 
-  prod_expfrac = exp_trim(prod_sgn, extended_prod_exp, provisional_prod_frac[msb:0v], bits_out, :mul)
+  prod_expfrac = exp_trim(prod_sgn, extended_prod_exp, provisional_prod_frac, bits_out, :mul)
 
   (prod_inf, prod_zer, prod_sgn, prod_expfrac)
 end
