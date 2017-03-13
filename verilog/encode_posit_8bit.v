@@ -95,17 +95,22 @@ module enc_shift_bin_8bit(
 endmodule
 
 module encode_posit_8bit(
-  input [13:0] eposit,
+  input p_inf,
+  input p_zer,
+  input p_sgn,
+  input [3:0] p_exp,
+  input [4:0] p_frc,
+  input [1:0] p_gs,
   output [7:0] posit);
 
   wire [3:0] shift_bin;
-  wire [8:0] efrac_gs;
-  wire [6:0] efrac_src;
   wire [6:0] regime_onehot;
   wire [8:0] shifted_frac_gs;
+  wire [8:0] efrac_gs;
+  wire [6:0] efrac_src;
 
   enc_shift_bin_8bit enc_shift_bin_8bit_shift_bin(
-    .regime (eposit[10:7]),
+    .regime (p_exp),
     .shift_bin (shift_bin));
 
   enc_regime_onehot_8bit enc_regime_onehot_8bit_regime_onehot(
@@ -113,7 +118,7 @@ module encode_posit_8bit(
     .regime_onehot (regime_onehot));
 
   enc_efrac_8bit enc_efrac_8bit_efrac_gs(
-    .sign (eposit[11]),
+    .sign (p_sgn),
     .inv (shift_bin[3]),
     .frac (efrac_src),
     .efrac_gs (efrac_gs));
@@ -124,12 +129,12 @@ module encode_posit_8bit(
     .shifted_frac (shifted_frac_gs));
 
   enc_finalizer_8bit enc_finalizer_8bit_posit(
-    .inf (eposit[13]),
-    .zero (eposit[12]),
-    .sign (eposit[11]),
+    .inf (p_inf),
+    .zero (p_zer),
+    .sign (p_sgn),
     .shifted_frac_gs (shifted_frac_gs),
     .posit (posit));
 
-  assign efrac_src = eposit[6:0];
+  assign efrac_src = {p_frc,p_gs};
 endmodule
 

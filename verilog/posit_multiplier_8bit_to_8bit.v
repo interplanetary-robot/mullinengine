@@ -5,7 +5,10 @@
 module posit_extended_multiplier_8bit_to_8bit(
   input [11:0] lhs,
   input [11:0] rhs,
-  output [13:0] eproduct);
+  output prod_inf,
+  output prod_zer,
+  output prod_sgn,
+  output [10:0] prod_expfrac);
 
   wire [3:0] lhs_exp;
   wire lhs_inf;
@@ -19,11 +22,7 @@ module posit_extended_multiplier_8bit_to_8bit(
   wire [3:0] rhs_exp;
   wire [4:0] lhs_frac;
   wire [5:0] extended_prod_exp;
-  wire prod_inf;
   wire [12:0] multiplied_frac;
-  wire prod_sgn;
-  wire [10:0] prod_expfrac;
-  wire prod_zer;
 
   mul_frac_8bit mul_frac_8bit_multiplied_frac(
     .lhs_sign (lhs_sgn),
@@ -62,7 +61,6 @@ module posit_extended_multiplier_8bit_to_8bit(
   assign prod_inf = (lhs_inf | rhs_inf);
   assign prod_zer = (lhs_zer | rhs_zer);
   assign prod_sgn = (lhs_sgn ^ rhs_sgn);
-  assign eproduct = {prod_inf,prod_zer,prod_sgn,prod_expfrac};
 endmodule
 
 
@@ -214,8 +212,11 @@ module posit_multiplier_8bit_to_8bit(
   input [7:0] rhs,
   output [7:0] mul_result);
 
-  wire [13:0] mul_result_extended;
+  wire res_zer;
   wire [11:0] lhs_extended;
+  wire res_inf;
+  wire [10:0] res_expfrac;
+  wire res_sgn;
   wire [11:0] rhs_extended;
 
   decode_posit_8bit decode_posit_8bit_lhs_extended(
@@ -226,13 +227,21 @@ module posit_multiplier_8bit_to_8bit(
     .posit (rhs),
     .eposit (rhs_extended));
 
-  posit_extended_multiplier_8bit_to_8bit posit_extended_multiplier_8bit_to_8bit_mul_result_extended(
+  posit_extended_multiplier_8bit_to_8bit posit_extended_multiplier_8bit_to_8bit_res_inf_res_zer_res_sgn_res_expfrac(
     .lhs (lhs_extended),
     .rhs (rhs_extended),
-    .eproduct (mul_result_extended));
+    .prod_inf (res_inf),
+    .prod_zer (res_zer),
+    .prod_sgn (res_sgn),
+    .prod_expfrac (res_expfrac));
 
   encode_posit_8bit encode_posit_8bit_mul_result(
-    .eposit (mul_result_extended[13:0]),
+    .p_inf (res_inf),
+    .p_zer (res_zer),
+    .p_sgn (res_sgn),
+    .p_exp (res_expfrac[10:7]),
+    .p_frc (res_expfrac[6:2]),
+    .p_gs (res_expfrac[1:0]),
     .posit (mul_result));
 
 

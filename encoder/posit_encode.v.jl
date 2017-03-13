@@ -148,39 +148,40 @@ doc"""
 end
 
 doc"""
-  encode_posit(p_sta::Wire{2:0v}, p_exp::Wire, p_frc::Wire, p_gs::Wire{1:0v}, bits)
+  encode_posit(p_inf::SingleWire,
+               p_zer::SingleWire,
+               p_sgn::SingleWire,
+               p_exp::Wire,
+               p_frc::Wire,
+               p_gs::Wire{1:0v},
+               bits)
 
   converts an extended posit (plus guard and summary bits) into a rounded posit
   in the canonical form.
-
-  extended posit format:
-
-  | inf_bit | zer_bit | sgn_bit | MSB  ...regime... LSB | MSB ...exp/frac... LSB | guard | summary |
-  |  1 bit  |  1 bit  |  1 bit  |  log2(bits) + 1 bits  |     (bits - 3) bits    | 1 bit |  1 bit  |
 
   the guard bit should be a value which represents what the next "bit" should be;
   the summary bit should be a value which represents |((lsb+2):∞); aka if ANY
   of the following bits are theoretically nonzero
 """
-@verilog function encode_posit(p_inf::Wire{0:0v},
-                               p_zer::Wire{0:0v},
-                               p_sgn::Wire{0:0v},
+@verilog function encode_posit(p_inf::SingleWire,
+                               p_zer::SingleWire,
+                               p_sgn::SingleWire,
                                p_exp::Wire,
                                p_frc::Wire,
                                p_gs::Wire{1:0v},
                                bits::Integer)
 
   @suffix                         "$(bits)bit"
-  @input p_exp                    range(regimebits(bits))
+  @input p_exp                    range(regime_bits(bits))
   @input p_frc                    range(bits - 3)
 
   shift_bin = enc_shift_bin(p_exp, bits)
 
-  regime_onehot = enc_regime_onehot(shift_bin[(rbits-2):0v], bits)
+  regime_onehot = enc_regime_onehot(shift_bin[msb-1:0v], bits)
 
-  efrac_src = Wire(p_exp, p_frc, p_gs)
+  efrac_src = Wire(p_frc, p_gs)
 
-  efrac_gs = enc_efrac(p_sgn, shift_bin[rbits - 1], efrac_src, bits)
+  efrac_gs = enc_efrac(p_sgn, shift_bin[msb], efrac_src, bits)
 
   shifted_frac_gs = enc_shifted_frac_gs(regime_onehot, efrac_gs, bits)
 
