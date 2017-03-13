@@ -24,7 +24,8 @@ doc"""
 end
 
 #test this comprehensively.
-for lhs = 0x00:0xFF
+print("testing mullin multiplier...")
+@time for lhs = 0x00:0xFF
   for rhs = 0x00:0xFF
     res = mullin_mul_wrapper(lhs, rhs) << 48
 
@@ -34,3 +35,4 @@ for lhs = 0x00:0xFF
     @test SigmoidNumbers.__round(res) == lhs_s * rhs_s
   end
 end
+println("OK.")

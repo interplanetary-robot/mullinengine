@@ -32,5 +32,10 @@ doc"""
 
   mul_shift, mul_frac = mul_frac_finisher(raw_mult_hidden_bits[1], mul_frac_unshifted, bits)
 
-  mul_shift, mul_frac
+  #TODO: This needs to be cleaned up a bit.
+  multiplied_frac = Wire(mul_shift, mul_frac)
+
+  
+
+
 end
