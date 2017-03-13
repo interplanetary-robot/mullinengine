@@ -9,15 +9,28 @@ doc"""
   lhs_dec = posit_decode(lhs)
   rhs_dec = posit_decode(rhs)
 
-  result_s, result_f = mullin_mul(lhs[10:9v], lhs[8:5v], lhs[4:0v],
-                                  rhs[10:9v], rhs[8:5v], rhs[8:5v], 8, 16)
+  #generate a the muliply fraction, like the mullin engine does.
+  mul_frc = Wire(lhs, Wire(0x0, 3)) * Wire(rhs, Wire(0x0, 3))
 
-  rhs_dec
+  #perform mullin_mul
+  mul_s, mul_e, mul_f = mullin_mul(lhs[10:9v], lhs[8:5v], lhs[4:0v],
+                                   rhs[10:9v], rhs[8:5v], rhs[4:0v],
+                                   mul_frc, 8, 16)
+
+  mul_fr = mul_f[msb:msb-12]
+  mul_gs = mul_f[2:1v]
+
+  rhs_dec = posit_encode(mul_s, mul_e, mul_fr, mul_gs, 16)
 end
 
-@verilog function frac_stripper(lhs::Wire{15:0v})
-  stripped = posit_decode(lhs)
-  result = stripped[12:0v]
-end
+#test this comprehensively.
+for lhs = 0x00:0xFF
+  for rhs = 0x00:0xFF
+    res = mullin_mul_wrapper(lhs, rhs) << 48
 
-#@test mullin_mul_wrapper(0b0100_0000, 0b0100_0000) == frac_stripper(0x4000) << 3
+    lhs_s = reinterpret(Posit{8,0}, lhs)
+    rhs_s = reinterpret(Posit{8,0}, rhs)
+
+    @test SigmoidNumbers.__round(res) == lhs_s * rhs_s
+  end
+end

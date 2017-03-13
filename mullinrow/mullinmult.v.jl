@@ -7,7 +7,7 @@ doc"""
   already had its product calculated and completes the process of multiplication
   on this value.
 """
-function mullin_mul(lhs_s::State, lhs_e::Wire, lhs_f::Wire, rhs_s::State, rhs_e::Wire, rhs_f::Wire, raw_m::Wire, size_in::Integer, size_out::Integer)
+@verilog function mullin_mul(lhs_s::State, lhs_e::Wire, lhs_f::Wire, rhs_s::State, rhs_e::Wire, rhs_f::Wire, raw_m::Wire, size_in::Integer, size_out::Integer)
   @suffix           "$(size_in)_$(size_out)"
   @input lhs_e      range(regimebits(size_in))
   @input lhs_f      range(size_in)
@@ -30,7 +30,7 @@ function mullin_mul(lhs_s::State, lhs_e::Wire, lhs_f::Wire, rhs_s::State, rhs_e:
   #final fraction result concatenates the rest of the raw multiply result.
   mul_frac_unshifted = Wire(second_addition, raw_m[msb:(msb - (inp_frac_delta + 1))v])
 
-  mul_is_shifted, muliplied_fraction = mul_frac_finisher(raw_mult_hidden_bits[1], mul_frac_unshifted, bits)
+  mul_shift, mul_frac = mul_frac_finisher(raw_mult_hidden_bits[1], mul_frac_unshifted, bits)
 
-  mul_is_shifted, multiplied_fraction
+  mul_shift, mul_frac
 end

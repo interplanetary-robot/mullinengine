@@ -27,6 +27,8 @@ function mullinrow(vec_s::FlagWire,         vec_e::Wire{_E08},         vec_f::Wi
     #go ahead and do this step always.
     mul_raw_f[idx] = vec_f * mtx_f[idx]
 
+    #this routine will be moved to a conditional that depends on what type of
+    #multiplication routine we're doing.
     mul_s[idx], mul_e[idx], mul_fin_f[idx] = mullin_mul(vec_s, vec_e, vec_f, mtx_s[idx], mtx_e[idx], mtx_f[idx], mul_raw_f[idx])
 
     mul_f[idx] = mul_fin_f[idx]
