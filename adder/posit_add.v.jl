@@ -278,7 +278,13 @@ doc"""
   posit_sum = (((eposit_size(bits) + 2) * ~zero_sum) & Wire(sum_inf, sum_zer, sum_sgn, sum_expfrc_trimmed)) |
               (((eposit_size(bits) + 2) * zero_sum)  & Wire(zeroed_result, Wire(0b00,2)))
 
-  posit_sum
+  #a temporary shim:
+  s_inf_tmp = posit_sum[msb]
+  s_zer_tmp = posit_sum[msb-1]
+  s_sgn_tmp = posit_sum[msb-2]
+  s_expfrc_tmp = posit_sum[(msb-3):0v]
+
+  s_inf_tmp, s_zer_tmp, s_sgn_tmp, s_expfrc_tmp
 end
 
 @verilog function posit_adder(lhs::Wire, rhs::Wire, bits::Integer)
@@ -290,10 +296,10 @@ end
 
   rhs_extended = decode_posit(rhs, bits)
 
-  add_result_extended = posit_extended_adder(lhs_extended, rhs_extended, bits)
+  res_inf, res_zer, res_sgn, res_expfrac = posit_extended_adder(lhs_extended, rhs_extended, bits)
 
   #no guard and summary bits for add_result.  (figure this out later)
-  add_result = encode_posit(add_result_extended, bits)
+  add_result = encode_posit(res_inf, res_zer, res_sgn, res_expfrac[msb:(bits-1)v], res_expfrac[(bits-2):2v], res_expfrac[1:0v], bits)
 
   add_result
 end

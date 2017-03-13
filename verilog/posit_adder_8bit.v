@@ -5,7 +5,10 @@
 module posit_extended_adder_8bit(
   input [11:0] lhs_e,
   input [11:0] rhs_e,
-  output [13:0] posit_sum);
+  output s_inf_tmp,
+  output s_zer_tmp,
+  output s_sgn_tmp,
+  output [10:0] s_expfrc_tmp);
 
   wire [13:0] parallel_universe_rhs_dom;
   wire [3:0] lhs_exp;
@@ -36,6 +39,7 @@ module posit_extended_adder_8bit(
   wire sum_sgn;
   wire sum_zer2;
   wire [11:0] zeroed_result;
+  wire [13:0] posit_sum;
   wire sum_zer1;
 
   add_zero_checker_8bit add_zero_checker_8bit_sum_zer2(
@@ -109,6 +113,10 @@ module posit_extended_adder_8bit(
   assign provisional_frc = provisional_sum[8:0];
   assign provisional_exp = provisional_sum[12:9];
   assign posit_sum = (({14{~(zero_sum)}} & {sum_inf,sum_zer,sum_sgn,sum_expfrc_trimmed}) | ({14{zero_sum}} & {zeroed_result,2'b00}));
+  assign s_inf_tmp = posit_sum[13];
+  assign s_zer_tmp = posit_sum[12];
+  assign s_sgn_tmp = posit_sum[11];
+  assign s_expfrc_tmp = posit_sum[10:0];
 endmodule
 
 
@@ -278,8 +286,11 @@ module posit_adder_8bit(
   input [7:0] rhs,
   output [7:0] add_result);
 
+  wire res_zer;
   wire [11:0] lhs_extended;
-  wire [13:0] add_result_extended;
+  wire res_inf;
+  wire [10:0] res_expfrac;
+  wire res_sgn;
   wire [11:0] rhs_extended;
 
   decode_posit_8bit decode_posit_8bit_lhs_extended(
@@ -290,13 +301,21 @@ module posit_adder_8bit(
     .posit (rhs),
     .eposit (rhs_extended));
 
-  posit_extended_adder_8bit posit_extended_adder_8bit_add_result_extended(
+  posit_extended_adder_8bit posit_extended_adder_8bit_res_inf_res_zer_res_sgn_res_expfrac(
     .lhs_e (lhs_extended),
     .rhs_e (rhs_extended),
-    .posit_sum (add_result_extended));
+    .s_inf_tmp (res_inf),
+    .s_zer_tmp (res_zer),
+    .s_sgn_tmp (res_sgn),
+    .s_expfrc_tmp (res_expfrac));
 
   encode_posit_8bit encode_posit_8bit_add_result(
-    .eposit (add_result_extended),
+    .p_inf (res_inf),
+    .p_zer (res_zer),
+    .p_sgn (res_sgn),
+    .p_exp (res_expfrac[10:7]),
+    .p_frc (res_expfrac[6:2]),
+    .p_gs (res_expfrac[1:0]),
     .posit (add_result));
 
 

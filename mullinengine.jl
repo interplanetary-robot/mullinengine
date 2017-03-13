@@ -17,11 +17,10 @@ include("./encoder/posit_encode_test.jl")
 include("./multiplier/posit_mult_test.jl")
 include("./adder/posit_add_test.jl")
 
-#include("./adder/posit_add_test.cg.jl")  for now, can only test one at a time.
-include("./multiplier/posit_mult_test.cg.jl")
+include("./adder/posit_add_test.cg.jl")  #for now, can only test one at a time.
+#include("./multiplier/posit_mult_test.cg.jl")
 @time test_8bit_mul()
 @time test_8bit_add()
-
 
 #work with the mullin engine proper.
 #=
