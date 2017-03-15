@@ -87,5 +87,8 @@ doc"""
                   (frcbits * (~(overflowed | underflowed) | (overflowed ^ sign)))) |
                   (frcbits * ( (overflowed | underflowed) & (overflowed ^ sign)))
 
-  expfrac = Wire(exp_trimmed, frc_trimmed)
+  gs_bits = frc_trimmed[1:0v]
+  frc_out = frc_trimmed[msb:2v]
+
+  exp_trimmed, frc_out, gs_bits
 end

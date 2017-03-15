@@ -176,9 +176,9 @@ doc"""
 
   extended_prod_exp = mul_exp_sum(prod_sgn, lhs_exp, rhs_exp, multiplied_frac[msb:(msb-1)v], bits_in, bits_out)
 
-  prod_expfrac = exp_trim(prod_sgn, extended_prod_exp, provisional_prod_frac, bits_out, :mul)
+  prod_exp, prod_frac, prod_gs = exp_trim(prod_sgn, extended_prod_exp, provisional_prod_frac, bits_out, :mul)
 
-  (prod_inf, prod_zer, prod_sgn, prod_expfrac)
+  (prod_inf, prod_zer, prod_sgn, prod_exp, prod_frac, prod_gs)
 end
 
 @verilog function posit_multiplier(lhs::Wire, rhs::Wire, bits_in::Integer, bits_out::Integer)
@@ -194,9 +194,9 @@ end
 
   rhs_extended = decode_posit(rhs, bits_in)
 
-  res_inf, res_zer, res_sgn, res_expfrac = posit_extended_multiplier(lhs_extended, rhs_extended, bits_in, bits_out)
+  res_inf, res_zer, res_sgn, res_exp, res_frac, res_gs = posit_extended_multiplier(lhs_extended, rhs_extended, bits_in, bits_out)
 
-  mul_result = encode_posit(res_inf, res_zer, res_sgn, res_expfrac[msb:(bits_out-1)v], res_expfrac[(bits_out-2):2v], res_expfrac[1:0v], bits_out)
+  mul_result = encode_posit(res_inf, res_zer, res_sgn, res_exp, res_frac, res_gs, bits_out)
 
   mul_result
 end

@@ -126,13 +126,13 @@ end
   rightshifted_gs
 end
 
-@verilog function add_theoretical(dom_exp::Wire, dom_frac::Wire, sub_exp::Wire, sub_frac::Wire, bits)
-  @suffix             "$(bits)bit"
+@verilog function add_theoretical(dom_exp::Wire, dom_frac::Wire, sub_exp::Wire, sub_frac::Wire, bits, extrabits)
+  @suffix             (extrabits == 0 ? "$(bits)bit" : "$(bits)_plus_$(extrabits)bit")
   #we are going to assume that the dominant exponent wins out (but that may not necssarily be true)
   @input dom_exp      range(regime_bits(bits))
-  @input dom_frac     range(bits)
+  @input dom_frac     range(bits + extrabits)
   @input sub_exp      range(regime_bits(bits))
-  @input sub_frac     range(bits)
+  @input sub_frac     range(bits + extrabits)
 
   edom_exp = Wire(Wire(false), dom_exp)
   esub_exp = Wire(Wire(false), sub_exp)
@@ -149,11 +149,14 @@ end
   #check if the top bit of the fraction matches the top bit of the dominant value
   #this indicates if the dominant value "won" the sign matchup in the fraction
   #phase of comparison.
-  fraction_win = ~(dom_frac[msb] ^ sum_frac[msb])
+  fraction_win = ~((dom_frac[msb] ^ sum_frac[msb]) | nuke_me)
 
+  provisional_exp =   dom_exp & (regime_bits(bits) * (~nuke_me))
+
+  provisional_frac = sum_frac & ((bits + 1) * (~nuke_me))
   #return the values added together in this hypothetical universe concatenated
   #with an indicator telling us if 'this side won'.
-  provisional_sum = Wire(fraction_win, dom_exp, sum_frac) & ((eposit_size(bits) + 2) * (~nuke_me))
+  fraction_win, provisional_exp, provisional_frac
 end
 
 @verilog function add_exp_diff(old_exp::Wire, exp_delta::Wire, bits::Integer)
@@ -232,26 +235,17 @@ doc"""
   # calculates the resulting sum for the two cases where the left hand side is
   # dominant, and the case where the right hand side is dominant.  add_theoretical
   # also internally destroys incorrect results by zeroing them out.
-  parallel_universe_lhs_dom = add_theoretical(lhs_exp, lhs_aug_frac, rhs_exp, rhs_aug_frac, bits)
-  parallel_universe_rhs_dom = add_theoretical(rhs_exp, rhs_aug_frac, lhs_exp, lhs_aug_frac, bits)
-
+  lhs_wins, lhs_dom_exp, lhs_dom_frc = add_theoretical(lhs_exp, lhs_aug_frac, rhs_exp, rhs_aug_frac, bits, 0)
+  rhs_wins, rhs_dom_exp, rhs_dom_frc = add_theoretical(rhs_exp, rhs_aug_frac, lhs_exp, lhs_aug_frac, bits, 0)
 
   #the top bit of the "provisional sum" says whether this exponent wound up negative,
   #so we should mix that in with the "other" sign.  It's possible that this is zero
   #because both rhs_sgn and lhs_sgn are zero (the exponents were the same).
-  sum_sgn = (parallel_universe_lhs_dom[msb] & lhs_sgn) | (parallel_universe_rhs_dom[msb] & rhs_sgn) |
-    (lhs_sgn & rhs_sgn)
+  sum_sgn = (lhs_wins & lhs_sgn) | (rhs_wins & rhs_sgn) | (lhs_sgn & rhs_sgn)
 
-  #the provisional sum combines the exponent and fraction parts and are selected
-  #the validity of the value.  It has the following structure:
-
-  # | winner | MSB ...exponent... LSB | MSB ...hidden bits | fraction bits LSB... |
-  # | 1 bit  |   regime_bits(bits)    |       3 bits       |    (bits-3) bits     |
-
-  provisional_sum = parallel_universe_lhs_dom[(msb-1):0v] | parallel_universe_rhs_dom[(msb-1):0v]
-  provisional_frc = provisional_sum[range(bits + 1)]
-  provisional_exp = provisional_sum[msb:(bits+1)v]
-
+  #set the provisional fraction and exponents.
+  provisional_frc = lhs_dom_frc | rhs_dom_frc
+  provisional_exp = lhs_dom_exp | rhs_dom_exp
 
   #extract a one-hot shift analysis from the provisional sum.
   frc_shift_onehot = add_shift_onehot(sum_sgn, provisional_frc, bits)
@@ -271,11 +265,11 @@ doc"""
   #trim overflow and underflow exponents
   #NB: in the future, this will also need to send error flags to the processor.
 
-  sum_expfrc_trimmed = exp_trim(sum_sgn, sum_exp_untrimmed, sum_frc_untrimmed, bits, :add)
+  (sum_exp, sum_frc, sum_gs) = exp_trim(sum_sgn, sum_exp_untrimmed, sum_frc_untrimmed, bits, :add)
 
   #reintegrate results with the possibility of having a zero sum.  If there's a
   #zero sum, it'll need to be padded with zero bits for guard and summary.
-  posit_sum = (((eposit_size(bits) + 2) * ~zero_sum) & Wire(sum_inf, sum_zer, sum_sgn, sum_expfrc_trimmed)) |
+  posit_sum = (((eposit_size(bits) + 2) * ~zero_sum) & Wire(sum_inf, sum_zer, sum_sgn, sum_exp, sum_frc, sum_gs)) |
               (((eposit_size(bits) + 2) * zero_sum)  & Wire(zeroed_result, Wire(0b00,2)))
 
   #a temporary shim:

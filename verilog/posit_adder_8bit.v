@@ -10,7 +10,6 @@ module posit_extended_adder_8bit(
   output s_sgn_tmp,
   output [10:0] s_expfrc_tmp);
 
-  wire [13:0] parallel_universe_rhs_dom;
   wire [3:0] lhs_exp;
   wire sum_nan;
   wire [7:0] frc_shift_onehot;
@@ -25,22 +24,28 @@ module posit_extended_adder_8bit(
   wire sum_inf;
   wire sum_zer;
   wire lhs_sgn;
-  wire [13:0] parallel_universe_lhs_dom;
-  wire [8:0] provisional_frc;
+  wire [3:0] lhs_dom_exp;
+  wire [8:0] rhs_dom_frc;
   wire rhs_sgn;
   wire [3:0] rhs_exp;
-  wire [4:0] sum_exp_untrimmed;
+  wire [8:0] provisional_frc;
   wire [4:0] lhs_frac;
-  wire [12:0] provisional_sum;
+  wire [4:0] sum_exp_untrimmed;
+  wire [3:0] sum_exp;
+  wire [4:0] sum_frc;
+  wire [3:0] rhs_dom_exp;
+  wire [1:0] sum_gs;
   wire zero_sum;
-  wire [10:0] sum_expfrc_trimmed;
+  wire [8:0] lhs_dom_frc;
   wire [6:0] sum_frc_untrimmed;
   wire [7:0] rhs_aug_frac;
   wire sum_sgn;
   wire sum_zer2;
   wire [11:0] zeroed_result;
   wire [13:0] posit_sum;
+  wire rhs_wins;
   wire sum_zer1;
+  wire lhs_wins;
 
   add_zero_checker_8bit add_zero_checker_8bit_sum_zer2(
     .lhs_sgn (lhs_sgn),
@@ -51,19 +56,23 @@ module posit_extended_adder_8bit(
     .rhs_frac (rhs_frac),
     .iszero (sum_zer2));
 
-  add_theoretical_8bit add_theoretical_8bit_parallel_universe_lhs_dom(
+  add_theoretical_8bit add_theoretical_8bit_lhs_wins_lhs_dom_exp_lhs_dom_frc(
     .dom_exp (lhs_exp),
     .dom_frac (lhs_aug_frac),
     .sub_exp (rhs_exp),
     .sub_frac (rhs_aug_frac),
-    .provisional_sum (parallel_universe_lhs_dom));
+    .fraction_win (lhs_wins),
+    .provisional_exp (lhs_dom_exp),
+    .provisional_frac (lhs_dom_frc));
 
-  add_theoretical_8bit add_theoretical_8bit_parallel_universe_rhs_dom(
+  add_theoretical_8bit add_theoretical_8bit_rhs_wins_rhs_dom_exp_rhs_dom_frc(
     .dom_exp (rhs_exp),
     .dom_frac (rhs_aug_frac),
     .sub_exp (lhs_exp),
     .sub_frac (lhs_aug_frac),
-    .provisional_sum (parallel_universe_rhs_dom));
+    .fraction_win (rhs_wins),
+    .provisional_exp (rhs_dom_exp),
+    .provisional_frac (rhs_dom_frc));
 
   add_shift_onehot_8bit add_shift_onehot_8bit_frc_shift_onehot(
     .sign (sum_sgn),
@@ -84,11 +93,13 @@ module posit_extended_adder_8bit(
     .exp_delta (sum_exp_diff),
     .new_exp (sum_exp_untrimmed));
 
-  exp_trim_8bit_add exp_trim_8bit_add_sum_expfrc_trimmed(
+  exp_trim_8bit_add exp_trim_8bit_add_sum_exp_sum_frc_sum_gs(
     .sign (sum_sgn),
     .exp_untrimmed (sum_exp_untrimmed),
     .frc_untrimmed (sum_frc_untrimmed),
-    .expfrac (sum_expfrc_trimmed));
+    .exp_trimmed (sum_exp),
+    .frc_out (sum_frc),
+    .gs_bits (sum_gs));
 
   assign lhs_inf = lhs_e[11];
   assign lhs_zer = lhs_e[10];
@@ -108,47 +119,14 @@ module posit_extended_adder_8bit(
   assign zero_sum = (lhs_zer | rhs_zer);
   assign lhs_aug_frac = {lhs_sgn,~(lhs_sgn),lhs_frac,1'b0};
   assign rhs_aug_frac = {rhs_sgn,~(rhs_sgn),rhs_frac,1'b0};
-  assign sum_sgn = (((parallel_universe_lhs_dom[13] & lhs_sgn) | (parallel_universe_rhs_dom[13] & rhs_sgn)) | (lhs_sgn & rhs_sgn));
-  assign provisional_sum = (parallel_universe_lhs_dom[12:0] | parallel_universe_rhs_dom[12:0]);
-  assign provisional_frc = provisional_sum[8:0];
-  assign provisional_exp = provisional_sum[12:9];
-  assign posit_sum = (({14{~(zero_sum)}} & {sum_inf,sum_zer,sum_sgn,sum_expfrc_trimmed}) | ({14{zero_sum}} & {zeroed_result,2'b00}));
+  assign sum_sgn = (((lhs_wins & lhs_sgn) | (rhs_wins & rhs_sgn)) | (lhs_sgn & rhs_sgn));
+  assign provisional_frc = (lhs_dom_frc | rhs_dom_frc);
+  assign provisional_exp = (lhs_dom_exp | rhs_dom_exp);
+  assign posit_sum = (({14{~(zero_sum)}} & {sum_inf,sum_zer,sum_sgn,sum_exp,sum_frc,sum_gs}) | ({14{zero_sum}} & {zeroed_result,2'b00}));
   assign s_inf_tmp = posit_sum[13];
   assign s_zer_tmp = posit_sum[12];
   assign s_sgn_tmp = posit_sum[11];
   assign s_expfrc_tmp = posit_sum[10:0];
-endmodule
-
-
-module add_theoretical_8bit(
-  input [3:0] dom_exp,
-  input [7:0] dom_frac,
-  input [3:0] sub_exp,
-  input [7:0] sub_frac,
-  output [13:0] provisional_sum);
-
-  wire [8:0] shft_sub_frac;
-  wire [4:0] sum_exp;
-  wire nuke_me;
-  wire fraction_win;
-  wire [4:0] esub_exp;
-  wire [4:0] edom_exp;
-  wire [3:0] shift;
-  wire [8:0] sum_frac;
-
-  add_rightshift_8bit add_rightshift_8bit_shft_sub_frac(
-    .sub_frac (sub_frac),
-    .shift (shift),
-    .rightshifted_gs (shft_sub_frac));
-
-  assign edom_exp = {1'b0,dom_exp};
-  assign esub_exp = {1'b0,sub_exp};
-  assign sum_exp = (edom_exp - esub_exp);
-  assign nuke_me = sum_exp[4];
-  assign shift = sum_exp[3:0];
-  assign sum_frac = ({dom_frac,1'b0} + shft_sub_frac);
-  assign fraction_win = ~((dom_frac[7] ^ sum_frac[8]));
-  assign provisional_sum = ({fraction_win,dom_exp,sum_frac} & {14{~(nuke_me)}});
 endmodule
 
 
@@ -178,17 +156,52 @@ module add_zero_checker_8bit(
 endmodule
 
 
+module add_theoretical_8bit(
+  input [3:0] dom_exp,
+  input [7:0] dom_frac,
+  input [3:0] sub_exp,
+  input [7:0] sub_frac,
+  output fraction_win,
+  output [3:0] provisional_exp,
+  output [8:0] provisional_frac);
+
+  wire [8:0] shft_sub_frac;
+  wire [4:0] sum_exp;
+  wire nuke_me;
+  wire [4:0] esub_exp;
+  wire [4:0] edom_exp;
+  wire [3:0] shift;
+  wire [8:0] sum_frac;
+
+  add_rightshift_8bit add_rightshift_8bit_shft_sub_frac(
+    .sub_frac (sub_frac),
+    .shift (shift),
+    .rightshifted_gs (shft_sub_frac));
+
+  assign edom_exp = {1'b0,dom_exp};
+  assign esub_exp = {1'b0,sub_exp};
+  assign sum_exp = (edom_exp - esub_exp);
+  assign nuke_me = sum_exp[4];
+  assign shift = sum_exp[3:0];
+  assign sum_frac = ({dom_frac,1'b0} + shft_sub_frac);
+  assign fraction_win = ~(((dom_frac[7] ^ sum_frac[8]) | nuke_me));
+  assign provisional_exp = (dom_exp & {4{~(nuke_me)}});
+  assign provisional_frac = (sum_frac & {9{~(nuke_me)}});
+endmodule
+
+
 module exp_trim_8bit_add(
   input sign,
   input [4:0] exp_untrimmed,
   input [6:0] frc_untrimmed,
-  output [10:0] expfrac);
+  output [3:0] exp_trimmed,
+  output [4:0] frc_out,
+  output [1:0] gs_bits);
 
   wire do_exp_clipping;
   wire [4:0] positive_limit_exp;
   wire [3:0] clipping_value;
   wire [6:0] frc_trimmed;
-  wire [3:0] exp_trimmed;
   wire overflowed;
   wire [4:0] negative_limit_exp;
   wire underflowed;
@@ -202,7 +215,8 @@ module exp_trim_8bit_add(
   assign do_exp_clipping = (underflowed | overflowed);
   assign exp_trimmed = ((exp_untrimmed[3:0] & {4{~(do_exp_clipping)}}) | (clipping_value & {4{do_exp_clipping}}));
   assign frc_trimmed = ((frc_untrimmed[6:0] & {7{(~((overflowed | underflowed)) | (overflowed ^ sign))}}) | {7{((overflowed | underflowed) & (overflowed ^ sign))}});
-  assign expfrac = {exp_trimmed,frc_trimmed};
+  assign gs_bits = frc_trimmed[1:0];
+  assign frc_out = frc_trimmed[6:2];
 endmodule
 
 
