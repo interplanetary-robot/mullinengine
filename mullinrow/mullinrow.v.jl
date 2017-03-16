@@ -53,16 +53,17 @@ function mullinrow(vec_s::State,         vec_e::Wire{_E08},         vec_f::Wire{
   for idx = 1:8
     #perform pre-shifting and adding the fractions for addition.  This may be replaced by a
     #different function in the future, that can accomodate different modes.
-    add_sgn[idx], add_provisional_exp[idx], add_provisional_frc[idx] = mullin_frc_add(acc_s[idx], acc_e[idx], acc_f[idx], mul_s[idx], mul_e[idx], mul_f[idx], 16)
+    add_sgn[idx], add_provisional_exp[idx], add_provisional_frc[idx] = mullin_frc_add(acc_s[idx], acc_e[idx], acc_f[idx],
+                                                                                      mul_s[idx], mul_e[idx], mul_f[idx], 16)
 
     #check for zeros.
-    add_zer[idx] = add_zero_checker(acc_s[idx][0], acc_e[idx], acc_f[idx], mul_s[idx][0], mul_e[idx], mul_f[idx], bits, 3)
+    add_zer[idx] = add_zero_checker(acc_s[idx][0], acc_e[idx], acc_f[idx][msb:3v], mul_s[idx][0], mul_e[idx], mul_f[idx][msb:3v], 16)
 
     #set various state variables.
     add_s[idx]   = mullin_addition_state(acc_s[idx], mul_s[idx], add_sgn[idx], add_zer[idx])
 
     #then do post-shift adjustment stuff.
-    add_exp[idx], add_frc[idx] = mullin_addition_cleanup()
+    add_e[idx], add_f[idx] = mullin_addition_cleanup()
   end
 
   #output wires
@@ -72,6 +73,8 @@ function mullinrow(vec_s::State,         vec_e::Wire{_E08},         vec_f::Wire{
   for idx = 1:8
     #for now, do this.  Later we'll implement other routines here that can
     #accomodate other types of operations.
-    out_s[idx], out_e[idx], out_f[idx] = add_s[idx], add_e[idx], add_f[idx]
+    out_s[idx] = add_s[idx]
+    out_e[idx] = add_e[idx]
+    out_f[idx] = add_f[idx]
   end
 end

@@ -130,6 +130,25 @@ module posit_extended_adder_8bit(
 endmodule
 
 
+module add_shift_onehot_8bit(
+  input sign,
+  input [8:0] provisional_sum_frac,
+  output [7:0] leading_onehot);
+
+  wire [8:0] sumvalue;
+
+  assign sumvalue = (provisional_sum_frac ^ {9{sign}});
+  assign leading_onehot[0] = sumvalue[8];
+  assign leading_onehot[1] = (~({sumvalue[8]}) & sumvalue[7]);
+  assign leading_onehot[2] = (~(|({sumvalue[8],sumvalue[7]})) & sumvalue[6]);
+  assign leading_onehot[3] = (~(|({sumvalue[8],sumvalue[7],sumvalue[6]})) & sumvalue[5]);
+  assign leading_onehot[4] = (~(|({sumvalue[8],sumvalue[7],sumvalue[6],sumvalue[5]})) & sumvalue[4]);
+  assign leading_onehot[5] = (~(|({sumvalue[8],sumvalue[7],sumvalue[6],sumvalue[5],sumvalue[4]})) & sumvalue[3]);
+  assign leading_onehot[6] = (~(|({sumvalue[8],sumvalue[7],sumvalue[6],sumvalue[5],sumvalue[4],sumvalue[3]})) & sumvalue[2]);
+  assign leading_onehot[7] = (~(|({sumvalue[8],sumvalue[7],sumvalue[6],sumvalue[5],sumvalue[4],sumvalue[3],sumvalue[2]})) & sumvalue[1]);
+endmodule
+
+
 module add_zero_checker_8bit(
   input lhs_sgn,
   input [3:0] lhs_exp,
@@ -217,25 +236,6 @@ module exp_trim_8bit_add(
   assign frc_trimmed = ((frc_untrimmed[6:0] & {7{(~((overflowed | underflowed)) | (overflowed ^ sign))}}) | {7{((overflowed | underflowed) & (overflowed ^ sign))}});
   assign gs_bits = frc_trimmed[1:0];
   assign frc_out = frc_trimmed[6:2];
-endmodule
-
-
-module add_shift_onehot_8bit(
-  input sign,
-  input [8:0] provisional_sum_frac,
-  output [7:0] leading_onehot);
-
-  wire [8:0] sumvalue;
-
-  assign sumvalue = (provisional_sum_frac ^ {9{sign}});
-  assign leading_onehot[0] = sumvalue[8];
-  assign leading_onehot[1] = (~({sumvalue[8]}) & sumvalue[7]);
-  assign leading_onehot[2] = (~(|({sumvalue[8],sumvalue[7]})) & sumvalue[6]);
-  assign leading_onehot[3] = (~(|({sumvalue[8],sumvalue[7],sumvalue[6]})) & sumvalue[5]);
-  assign leading_onehot[4] = (~(|({sumvalue[8],sumvalue[7],sumvalue[6],sumvalue[5]})) & sumvalue[4]);
-  assign leading_onehot[5] = (~(|({sumvalue[8],sumvalue[7],sumvalue[6],sumvalue[5],sumvalue[4]})) & sumvalue[3]);
-  assign leading_onehot[6] = (~(|({sumvalue[8],sumvalue[7],sumvalue[6],sumvalue[5],sumvalue[4],sumvalue[3]})) & sumvalue[2]);
-  assign leading_onehot[7] = (~(|({sumvalue[8],sumvalue[7],sumvalue[6],sumvalue[5],sumvalue[4],sumvalue[3],sumvalue[2]})) & sumvalue[1]);
 endmodule
 
 

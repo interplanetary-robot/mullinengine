@@ -8,7 +8,7 @@ doc"""
 
   NB: this may be replaced by a direct encoding algorithm.
 """
-@verilog function add_shift_diff(shift_onehot::Wire, bits)
+@verilog function add_shift_diff(shift_onehot::Wire, bits::Integer)
   @suffix                 "$(bits)bit"
   @input shift_onehot     range(bits)
   #biased one-hot-shift:  0 - shift left one
@@ -45,7 +45,7 @@ doc"""
 
   onehot shift is encoded with "rightshift one" as 0, "no shift" as 1, "leftshift one" as 2...
 """
-@verilog function add_apply_shift(fraction::Wire, shift_onehot::Wire, bits)
+@verilog function add_apply_shift(fraction::Wire, shift_onehot::Wire, bits::Integer)
   @suffix                 "$(bits)bit"
   @input fraction         range(bits+1)
   @input shift_onehot     range(bits)
@@ -126,7 +126,7 @@ end
   rightshifted_gs
 end
 
-@verilog function add_theoretical(dom_exp::Wire, dom_frac::Wire, sub_exp::Wire, sub_frac::Wire, bits, extrabits)
+@verilog function add_theoretical(dom_exp::Wire, dom_frac::Wire, sub_exp::Wire, sub_frac::Wire, bits, extrabits = 0)
   @suffix             (extrabits == 0 ? "$(bits)bit" : "$(bits)_plus_$(extrabits)bit")
   #we are going to assume that the dominant exponent wins out (but that may not necssarily be true)
   @input dom_exp      range(regime_bits(bits))
@@ -235,8 +235,8 @@ doc"""
   # calculates the resulting sum for the two cases where the left hand side is
   # dominant, and the case where the right hand side is dominant.  add_theoretical
   # also internally destroys incorrect results by zeroing them out.
-  lhs_wins, lhs_dom_exp, lhs_dom_frc = add_theoretical(lhs_exp, lhs_aug_frac, rhs_exp, rhs_aug_frac, bits, 0)
-  rhs_wins, rhs_dom_exp, rhs_dom_frc = add_theoretical(rhs_exp, rhs_aug_frac, lhs_exp, lhs_aug_frac, bits, 0)
+  lhs_wins, lhs_dom_exp, lhs_dom_frc = add_theoretical(lhs_exp, lhs_aug_frac, rhs_exp, rhs_aug_frac, bits)
+  rhs_wins, rhs_dom_exp, rhs_dom_frc = add_theoretical(rhs_exp, rhs_aug_frac, lhs_exp, lhs_aug_frac, bits)
 
   #the top bit of the "provisional sum" says whether this exponent wound up negative,
   #so we should mix that in with the "other" sign.  It's possible that this is zero

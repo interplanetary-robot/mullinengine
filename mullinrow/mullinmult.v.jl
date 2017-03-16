@@ -3,6 +3,27 @@
 #be included in a "mode" variable.
 
 doc"""
+  `mullin_mul_round(fraction, bits)`
+  rounds the fraction.  The last bit is the summary bit, and the penultimate
+  bit is the guard bit.  Input size should be (bits - 1) and it outputs a
+  fraction of size (bits)
+"""
+@verilog function mullin_mul_round(unrounded_frc::Wire, bits::Integer)
+  @suffix "$(bits)bit"
+  @input unrounded_frc        range(bits - 1)
+
+  inner_bit = unrounded_frc[2]
+  guard_bit = unrounded_frc[1]
+  summary_bit = unrounded_frc[0]
+
+  should_roundup = guard_bit & (summary_bit | inner_bit)
+  add_value = Wire(Wire(zero(UInt64), bits-4), should_roundup)
+
+  rounded_frc = Wire(unrounded_frc[msb:3v] + add_value, Wire(0x0, 3))
+end
+
+
+doc"""
   `mullin_mul` takes a lhs and rhs expanded posit from the mullin engine that has
   already had its product calculated and completes the process of multiplication
   on this value.
@@ -11,7 +32,7 @@ doc"""
                              rhs_s::State, rhs_e::Wire, rhs_f::Wire,
                              raw_m::Wire, bits_in::Integer, bits_out::Integer)
 
-  @suffix           "$(size_in)_$(size_out)"
+  @suffix           "$(size_in)_to_$(size_out)bit"
   @input lhs_e      range(regime_bits(bits_in))
   @input lhs_f      range(bits_in)
   @input rhs_e      range(regime_bits(bits_in))
@@ -39,25 +60,19 @@ doc"""
   lhs_sum_result = lhs_frac_rhs_sign + general_mul_result[msb:(msb - inp_frac_delta - 2)v]
   full_sum_result = Wire(rhs_frac_lhs_sign + lhs_sum_result, general_mul_result[(msb - inp_frac_delta - 3):6v])
 
-
   #amend the fraction so that it's shifted and report whether or not it's been shifted
   (frac_report, shifted_frac) = mul_frac_finisher(top_hidden_bit, full_sum_result, bits_in * 2 - 4)
 
-  provisional_prod_frac = mul_frac_trimmer(shifted_frac[(msb-2):0v], bits_in * 2 - 7, bits_out)
+  provisional_prod_frac = mul_frac_trimmer(shifted_frac, bits_in * 2 - 5, bits_out)
 
   prod_sgn = lhs_inf | rhs_inf
   prod_s = Wire(prod_sgn, lhs_zer | rhs_zer, lhs_sgn ^ rhs_sgn)
 
-  extended_prod_exp = mul_exp_sum(prod_sgn, lhs_e, rhs_e, shifted_frac[msb:(msb-1)v], bits_in, bits_out)
+  extended_prod_exp = mul_exp_sum(prod_sgn, lhs_e, rhs_e, frac_report, bits_in, bits_out)
 
   #we may want to do this slightly better in the future.
-  prod_expfrac = exp_trim(prod_sgn, extended_prod_exp, provisional_prod_frac, bits_out, :mul)
-
-  prod_exp = prod_expfrac[msb:(bits_out - 1)v]
-  prod_frc = prod_expfrac[(bits_out - 2):2v]
-  
-  #throw this away, for now.
-  prod_gs = prod_expfrac[1:0v]
+  prod_exp, prod_frc_short = exp_trim(prod_sgn, extended_prod_exp, provisional_prod_frac, bits_out, :mul)
+  prod_frc = Wire(prod_frc_short, Wire(0x00, 3))
 
   (prod_s, prod_exp, prod_frc)
 end

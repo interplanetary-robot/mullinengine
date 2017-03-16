@@ -58,21 +58,25 @@ doc"""
   @input provisional_frc      range(bits + 3)
 
   #extract a one-hot shift analysis from the provisional sum.
-  frc_shift_onehot = add_shift_onehot(sum_sgn, provisional_frc, bits, 3)
+  frc_shift_onehot = add_shift_onehot(sum_sgn, provisional_frc, bits)
 
   #shift the fraction.  This is not necessarily the finalized fraction, as the
   #value can be altered by an underflow or overflow process.
-  sum_frc_untrimmed = add_apply_shift(provisional_frc, frc_shift_onehot, bits, 3)
+  sum_frc_untrimmed = add_apply_shift(provisional_frc, frc_shift_onehot, bits)
 
   #calculate the exponent difference that will happen due to a shift.  For
   #addition, this could be no change or +1 due to carry; for subtraction, this
   #could be no change or -(arbitrary amount).
-  sum_exp_diff = add_shift_diff(frc_shift_onehot, bits, 3)
+  sum_exp_diff = add_shift_diff(frc_shift_onehot, bits)
 
   #apply this difference to the provisional exponent.
-  sum_exp_untrimmed = add_exp_diff(provisional_exp, sum_exp_diff, bits, 3)
+  sum_exp_untrimmed = add_exp_diff(provisional_exp, sum_exp_diff, bits)
 
   #trim overflow and underflow exponents
+  (sum_exp, sum_frc_unrounded, sum_gs) = exp_trim(sum_sgn, sum_exp_untrimmed, sum_frc_untrimmed, bits, :add)
+
+  sum_frc = add_mullin_round(sum_frc_unrounded, sum_gs)
+
   #NB: in the future, this will also need to send error flags to the processor.
-  (sum_exp, sum_frc) = exp_trim(sum_sgn, sum_exp_untrimmed, sum_frc_untrimmed, bits, 3, :add)
+  (sum_exp, sum_frc)
 end

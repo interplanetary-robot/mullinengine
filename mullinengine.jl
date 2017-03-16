@@ -19,12 +19,21 @@ include("./multiplier/posit_mult_test.jl")
 include("./adder/posit_add_test.jl")
 
 
-@time test_8bit_add()
+#@time test_8bit_add()
 #@time test_8bit_mul()
-include("./adder/posit_add_test.cg.jl")  #for now, can only test one at a time.
+#include("./adder/posit_add_test.cg.jl")  #for now, can only test one at a time.
 #include("./multiplier/posit_mult_test.cg.jl")
 #work with the mullin engine proper.
 
-
 include("./mullinrow/mullinrow.v.jl")
 include("./mullinrow/mullintest.jl")
+
+#=
+lhs = 0x01
+rhs = 0x03
+println(bits(0x000c))
+println(bits(posit_multiplier(lhs, rhs, 8, 16))[end-15:end])
+println(bits(mullin_mul_wrapper(lhs,rhs))[end-15:end])
+=#
+
+test_mullin_mul()

@@ -74,8 +74,7 @@ doc"""
   #amend the fraction so that it's shifted and report whether or not it's been shifted
   (frac_report, shifted_frac) = mul_frac_finisher(top_hidden_bit, full_sum_result, bits*2 - 4)
 
-  #combine these values(for now)
-  multiplied_frac = Wire(frac_report, shifted_frac)
+  (frac_report, shifted_frac)
 end
 
 @verilog function mul_frac_trimmer(untrimmed_fraction::Wire, bits_in::Integer, bits_out::Integer)
@@ -167,14 +166,15 @@ doc"""
   rhs_exp  = rhs[(msb-3):(bits_in-3)v]
   rhs_frac = rhs[range(bits_in-3)]
 
-  multiplied_frac = mul_frac(lhs_sgn, lhs_frac, rhs_sgn, rhs_frac, bits_in)
-  provisional_prod_frac = mul_frac_trimmer(multiplied_frac[(msb-2):0v], (bits_in * 2 - 5), bits_out)
+  (frac_report, multiplied_frac) = mul_frac(lhs_sgn, lhs_frac, rhs_sgn, rhs_frac, bits_in)
+
+  provisional_prod_frac = mul_frac_trimmer(multiplied_frac, (bits_in * 2 - 5), bits_out)
 
   prod_inf = lhs_inf | rhs_inf
   prod_zer = lhs_zer | rhs_zer
   prod_sgn = lhs_sgn ^ rhs_sgn
 
-  extended_prod_exp = mul_exp_sum(prod_sgn, lhs_exp, rhs_exp, multiplied_frac[msb:(msb-1)v], bits_in, bits_out)
+  extended_prod_exp = mul_exp_sum(prod_sgn, lhs_exp, rhs_exp, frac_report, bits_in, bits_out)
 
   prod_exp, prod_frac, prod_gs = exp_trim(prod_sgn, extended_prod_exp, provisional_prod_frac, bits_out, :mul)
 
