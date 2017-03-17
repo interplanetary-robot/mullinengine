@@ -1,5 +1,6 @@
-@verilog function mullin_preshift_add(acc_s::Wire{2:0v}, acc_e::Wire, acc_f::Wire,
-                                      mul_s::Wire{2:0v}, mul_e::Wire, mul_f::Wire, bits::Integer)
+
+@verilog function mullin_frc_add(acc_s::Wire{2:0v}, acc_e::Wire, acc_f::Wire,
+                                 mul_s::Wire{2:0v}, mul_e::Wire, mul_f::Wire, bits::Integer)
 
   @suffix           "$(bits)"
   @input acc_e      range(regime_bits(bits))
@@ -24,12 +25,13 @@
   #the acc_dom_frac is going to also be used for "other types of multiplication"
   acc_wins, acc_dom_exp, acc_dom_frc = add_theoretical(acc_e, z_acc_f, mul_e, z_mul_f, bits, 3)
   mul_wins, mul_dom_exp, mul_dom_frc = add_theoretical(mul_e, z_mul_f, acc_e, z_acc_f, bits, 3)
+  #discard the gs bits from acc_dom_frc/mul_dom_frc
 
-  res_sgn = (acc_wins & acc_sgn)                           | (mul_wins & mul_sgn)
-  res_exp = ((regime_bits(bits) * acc_wins) & acc_dom_exp) | ((regime_bits(bits) * mul_wins) & mul_dom_exp)
-  res_frc = (((bits + 3) * acc_wins) & acc_dom_frc)        | (((bits + 3) * mul_wins) & mul_dom_frc)
+  res_sgn = (acc_wins & acc_sgn) | (mul_wins & mul_sgn) | (acc_sgn & mul_sgn)
+  res_exp = acc_dom_exp          | mul_dom_exp
+  res_frc = acc_dom_frc          | mul_dom_frc
 
-  (res_sgn, res_exp, res_frac)
+  (res_sgn, res_exp, res_frc)
 end
 
 @verilog function mullin_addition_state(acc_s::Wire{2:0v}, mul_s::Wire{2:0v}, sum_sgn::SingleWire, sum_zerocheck::SingleWire)
@@ -37,15 +39,14 @@ end
   mul_inf = mul_s[2]
   acc_zer = acc_s[1]
   mul_zer = mul_s[1]
-  acc_sgn = acc_s[0]
-  mul_sgn = mul_s[0]
 
   sum_inf  = acc_inf | mul_inf
   #nan if both sides are inf, or if either side propagates a NaN.
   sum_nan = (acc_inf & mul_inf) | ((acc_inf & acc_zer) | (mul_inf & mul_zer))
+
   sum_zer = ((acc_zer & mul_zer) | sum_zerocheck) | sum_nan
 
-  Wire(sum_nan, sum_zer, sum_sgn)
+  Wire(sum_inf, sum_zer, sum_sgn)
 end
 
 doc"""
@@ -55,14 +56,14 @@ doc"""
 """
 @verilog function mullin_addition_cleanup(sgn::Wire{0:0v}, provisional_exp::Wire, provisional_frc::Wire, bits::Integer)
   @input provisional_exp      range(regime_bits(bits))
-  @input provisional_frc      range(bits + 3)
+  @input provisional_frc      range(bits + 4)
 
   #extract a one-hot shift analysis from the provisional sum.
-  frc_shift_onehot = add_shift_onehot(sum_sgn, provisional_frc, bits)
+  frc_shift_onehot = add_shift_onehot(sgn, provisional_frc[msb:3v], bits)
 
   #shift the fraction.  This is not necessarily the finalized fraction, as the
   #value can be altered by an underflow or overflow process.
-  sum_frc_untrimmed = add_apply_shift(provisional_frc, frc_shift_onehot, bits)
+  sum_frc_untrimmed = add_apply_shift(provisional_frc[msb:3v], frc_shift_onehot, bits)
 
   #calculate the exponent difference that will happen due to a shift.  For
   #addition, this could be no change or +1 due to carry; for subtraction, this
@@ -73,9 +74,9 @@ doc"""
   sum_exp_untrimmed = add_exp_diff(provisional_exp, sum_exp_diff, bits)
 
   #trim overflow and underflow exponents
-  (sum_exp, sum_frc_unrounded, sum_gs) = exp_trim(sum_sgn, sum_exp_untrimmed, sum_frc_untrimmed, bits, :add)
+  (sum_exp, sum_frc_unrounded, sum_gs) = exp_trim(sgn, sum_exp_untrimmed, sum_frc_untrimmed, bits, :add)
 
-  sum_frc = add_mullin_round(sum_frc_unrounded, sum_gs)
+  sum_frc = frac_round(sum_frc_unrounded, sum_gs, bits, 3)
 
   #NB: in the future, this will also need to send error flags to the processor.
   (sum_exp, sum_frc)

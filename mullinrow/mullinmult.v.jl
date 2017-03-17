@@ -2,26 +2,6 @@
 #bit size, using a pre-multiplied fraction value.  Later, more routines will
 #be included in a "mode" variable.
 
-doc"""
-  `mullin_mul_round(fraction, bits)`
-  rounds the fraction.  The last bit is the summary bit, and the penultimate
-  bit is the guard bit.  Input size should be (bits - 1) and it outputs a
-  fraction of size (bits)
-"""
-@verilog function mullin_mul_round(unrounded_frc::Wire, bits::Integer)
-  @suffix "$(bits)bit"
-  @input unrounded_frc        range(bits - 1)
-
-  inner_bit = unrounded_frc[2]
-  guard_bit = unrounded_frc[1]
-  summary_bit = unrounded_frc[0]
-
-  should_roundup = guard_bit & (summary_bit | inner_bit)
-  add_value = Wire(Wire(zero(UInt64), bits-4), should_roundup)
-
-  rounded_frc = Wire(unrounded_frc[msb:3v] + add_value, Wire(0x0, 3))
-end
-
 
 doc"""
   `mullin_mul` takes a lhs and rhs expanded posit from the mullin engine that has

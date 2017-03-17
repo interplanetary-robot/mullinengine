@@ -106,15 +106,15 @@ doc"""
   leading_onehot
 end
 
-@verilog function add_rightshift(sub_frac::Wire, shift::Wire, bits)
-  @suffix             "$(bits)bit"
-  @input sub_frac     range(bits)
+@verilog function add_rightshift(sub_frac::Wire, shift::Wire, bits::Integer, extrabits = 0)
+  @suffix             (extrabits == 0 ? "$(bits)bit" : "$(bits)_plus_$(extrabits)bit")
+  @input sub_frac     range(bits + extrabits)
   @input shift        range(regime_bits(bits))
 
   rightshifted_frac = sub_frac >>> shift
 
-  summary_wires = Wire{(bits-1):2v}()
-  for idx = 2:(bits - 1)
+  summary_wires = Wire{(bits + extrabits - 1):2v}()
+  for idx = 2:(bits + extrabits - 1)
     #see if the shift corresponds.
     summary_wires[idx] = (Wire(Unsigned(idx),regime_bits(bits)) == shift) & |(sub_frac[(idx - 1):1v])
   end
@@ -126,7 +126,7 @@ end
   rightshifted_gs
 end
 
-@verilog function add_theoretical(dom_exp::Wire, dom_frac::Wire, sub_exp::Wire, sub_frac::Wire, bits, extrabits = 0)
+@verilog function add_theoretical(dom_exp::Wire, dom_frac::Wire, sub_exp::Wire, sub_frac::Wire, bits::Integer, extrabits = 0)
   @suffix             (extrabits == 0 ? "$(bits)bit" : "$(bits)_plus_$(extrabits)bit")
   #we are going to assume that the dominant exponent wins out (but that may not necssarily be true)
   @input dom_exp      range(regime_bits(bits))
@@ -141,7 +141,7 @@ end
   nuke_me = sum_exp[msb]
   shift = sum_exp[(msb-1):0v]
 
-  shft_sub_frac = add_rightshift(sub_frac, shift, bits)
+  shft_sub_frac = add_rightshift(sub_frac, shift, bits, extrabits)
 
   #add the two fractions together.
   sum_frac = Wire(dom_frac, Wire(false)) + shft_sub_frac
@@ -151,9 +151,9 @@ end
   #phase of comparison.
   fraction_win = ~((dom_frac[msb] ^ sum_frac[msb]) | nuke_me)
 
-  provisional_exp =   dom_exp & (regime_bits(bits) * (~nuke_me))
+  provisional_exp =  dom_exp & (regime_bits(bits) * (~nuke_me))
 
-  provisional_frac = sum_frac & ((bits + 1) * (~nuke_me))
+  provisional_frac = sum_frac & ((bits + extrabits + 1) * (~nuke_me))
   #return the values added together in this hypothetical universe concatenated
   #with an indicator telling us if 'this side won'.
   fraction_win, provisional_exp, provisional_frac

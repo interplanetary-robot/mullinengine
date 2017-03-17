@@ -3,6 +3,7 @@ typealias State Wire{2:0v}
 
 #get mullin multiplication up in here.
 include("mullinmult.v.jl")
+include("mullinadd.v.jl")
 
 _F08 = 7:0v
 _E08 = 3:0v
@@ -12,21 +13,43 @@ _E16 = 4:0v
 doc"""
   function mullinrow(vec_s, vec_e, vec_f, acc_s, acc_f, acc_e, mul_s, mul_e, mul_f, mode, rownumber, flags)
 """                #state variables           #exponent variables        #fraction variables
-function mullinrow(vec_s::State,         vec_e::Wire{_E08},         vec_f::Wire{_F08},
-                   acc_s::Vector{State}, acc_e::Vector{Wire{_E16}}, acc_f::Vector{Wire{_E16}},
-                   mtx_s::Vector{State}, mtx_e::Vector{Wire{_E08}}, mtx_f::Vector{Wire{_E08}},
-                   mode::Wire{0:0v}, rownumber::Integer, flags::Set{Symbol})
+function mullinrow(vec::Wire{14:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v})
+
+  #set state variables.
+  vec_s = vec[14:12v]
+  vec_e = vec[11:8v]
+  vec_f = vec[7:0v]
+
+  #set accumulator values.
+  acc_s::Vector{State}(8)
+  acc_e::Vector{Wire{_E16}}(8)
+  acc_f::Vector{Wire{_F16}}(8)
+
+  #set muliplier values.
+  mul_s::Vector{State}(8)
+  mul_e::Vector{Wire{_E16}}(8)
+  mul_f::Vector{Wire{_F16}}(8)
+
+  #assign these lines.
+  for idx = 1:8
+    acc_s[idx] = acc[(23 * idx):(23 * idx - 2)v]
+    acc_e[idx] = acc[(23 * idx - 3):(23 * idx - 7)v]
+    acc_f[idx] = acc[(23 * idx - 8):(23 * idx - 23)v]
+
+    mtx_s[idx] = mtx[(14 * idx):(14 * idx - 2)v]
+    mtx_e[idx] = mtx[(14 * idx - 3):(14 * idx - 6)v]
+    mtx_f[idx] = mtx[(14 * idx - 7):(14 * idx - 14)v]
+  end
 
   #do the multiplication stage.
-
   mul_s::Vector{State}(8)
   mul_e::Vector{Wire{_E16}}(8)
   mul_f::Vector{Wire{_F16}}(8)
 
   #the multiplication routine could "require additional effort for other structures"
-
   mul_raw_f::Vector{Wire{_F16}}(8)
   mul_fin_f::Vector{Wire{_F16}}(8)
+
   for idx = 1:8
     #go ahead and do this step always.
     mul_raw_f[idx] = vec_f * mtx_f[idx]
@@ -57,13 +80,14 @@ function mullinrow(vec_s::State,         vec_e::Wire{_E08},         vec_f::Wire{
                                                                                       mul_s[idx], mul_e[idx], mul_f[idx], 16)
 
     #check for zeros.
-    add_zer[idx] = add_zero_checker(acc_s[idx][0], acc_e[idx], acc_f[idx][msb:3v], mul_s[idx][0], mul_e[idx], mul_f[idx][msb:3v], 16)
+    add_zer[idx] = add_zero_checker(acc_s[idx][0], acc_e[idx], acc_f[idx][msb:3v],
+                                    mul_s[idx][0], mul_e[idx], mul_f[idx][msb:3v], 16)
 
     #set various state variables.
     add_s[idx]   = mullin_addition_state(acc_s[idx], mul_s[idx], add_sgn[idx], add_zer[idx])
 
     #then do post-shift adjustment stuff.
-    add_e[idx], add_f[idx] = mullin_addition_cleanup()
+    add_e[idx], add_f[idx] = mullin_addition_cleanup(add_sgn[idx], add_provisional_exp[idx], add_provisional_frc[idx], 16)
   end
 
   #output wires
@@ -77,4 +101,6 @@ function mullinrow(vec_s::State,         vec_e::Wire{_E08},         vec_f::Wire{
     out_e[idx] = add_e[idx]
     out_f[idx] = add_f[idx]
   end
+
+  Wire([Wire(out_s[idx], out_e[idx], out_f[idx]) for idx in 1:8]...)
 end

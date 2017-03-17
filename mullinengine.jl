@@ -3,6 +3,7 @@ using Base.Test
 using SigmoidNumbers
 
 include("./posit-facts.jl")
+include("./general/frac_round.v.jl")
 include("./general/exp_trim.v.jl")
 include("./decoder/posit_decode.v.jl")
 include("./encoder/posit_encode.v.jl")
@@ -10,14 +11,11 @@ include("./multiplier/posit_mult.v.jl")
 include("./adder/posit_add.v.jl")
 
 #testing suite
-
-
 include("./general/methods_testing.jl")
 include("./decoder/posit_decode_test.jl")
 include("./encoder/posit_encode_test.jl")
 include("./multiplier/posit_mult_test.jl")
 include("./adder/posit_add_test.jl")
-
 
 #@time test_8bit_add()
 #@time test_8bit_mul()
@@ -28,12 +26,7 @@ include("./adder/posit_add_test.jl")
 include("./mullinrow/mullinrow.v.jl")
 include("./mullinrow/mullintest.jl")
 
-#=
-lhs = 0x01
-rhs = 0x03
-println(bits(0x000c))
-println(bits(posit_multiplier(lhs, rhs, 8, 16))[end-15:end])
-println(bits(mullin_mul_wrapper(lhs,rhs))[end-15:end])
-=#
+#test_mullin_mul()
+#test_mullin_add()
 
-test_mullin_mul()
+test_mullin_row()
