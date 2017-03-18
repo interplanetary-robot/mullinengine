@@ -10,6 +10,11 @@ _E08 = 3:0v
 _F16 = 15:0v
 _E16 = 4:0v
 
+
+function printer(name, s, e, f, bits)
+  println(name, ": P(0x", hex(Unsigned(encode_posit(s[2], s[1], s[0], e, f[msb:3v], f[2:1v], bits)),bits ÷ 4), ")")
+end
+
 doc"""
   function mullinrow(vec_s, vec_e, vec_f, acc_s, acc_f, acc_e, mul_s, mul_e, mul_f, mode, rownumber, flags)
 """                #state variables           #exponent variables        #fraction variables
@@ -21,34 +26,33 @@ function mullinrow(vec::Wire{14:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v})
   vec_f = vec[7:0v]
 
   #set accumulator values.
-  acc_s::Vector{State}(8)
-  acc_e::Vector{Wire{_E16}}(8)
-  acc_f::Vector{Wire{_F16}}(8)
+  acc_s = Vector{State}(8)
+  acc_e = Vector{Wire{_E16}}(8)
+  acc_f = Vector{Wire{_F16}}(8)
 
   #set muliplier values.
-  mul_s::Vector{State}(8)
-  mul_e::Vector{Wire{_E16}}(8)
-  mul_f::Vector{Wire{_F16}}(8)
+  mtx_s = Vector{State}(8)
+  mtx_e = Vector{Wire{_E08}}(8)
+  mtx_f = Vector{Wire{_F08}}(8)
 
-  #assign these lines.
+  #assign these lines.  Make sure the top one is the first value.
   for idx = 1:8
-    acc_s[idx] = acc[(23 * idx):(23 * idx - 2)v]
-    acc_e[idx] = acc[(23 * idx - 3):(23 * idx - 7)v]
-    acc_f[idx] = acc[(23 * idx - 8):(23 * idx - 23)v]
+    acc_s[idx] = acc[(24 * idx - 1):(24 * idx - 3)v]
+    acc_e[idx] = acc[(24 * idx - 4):(24 * idx - 8)v]
+    acc_f[idx] = acc[(24 * idx - 9):(24 * idx - 24)v]
 
-    mtx_s[idx] = mtx[(14 * idx):(14 * idx - 2)v]
-    mtx_e[idx] = mtx[(14 * idx - 3):(14 * idx - 6)v]
-    mtx_f[idx] = mtx[(14 * idx - 7):(14 * idx - 14)v]
+    mtx_s[idx] = mtx[(15 * idx - 1):(15 * idx - 3)v]
+    mtx_e[idx] = mtx[(15 * idx - 4):(15 * idx - 7)v]
+    mtx_f[idx] = mtx[(15 * idx - 8):(15 * idx - 15)v]
   end
 
   #do the multiplication stage.
-  mul_s::Vector{State}(8)
-  mul_e::Vector{Wire{_E16}}(8)
-  mul_f::Vector{Wire{_F16}}(8)
+  mul_s = Vector{State}(8)
+  mul_e = Vector{Wire{_E16}}(8)
+  mul_f = Vector{Wire{_F16}}(8)
 
   #the multiplication routine could "require additional effort for other structures"
-  mul_raw_f::Vector{Wire{_F16}}(8)
-  mul_fin_f::Vector{Wire{_F16}}(8)
+  mul_raw_f = Vector{Wire{_F16}}(8)
 
   for idx = 1:8
     #go ahead and do this step always.
@@ -56,24 +60,22 @@ function mullinrow(vec::Wire{14:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v})
 
     #this routine will be moved to a conditional that depends on what type of
     #multiplication routine we're doing.
-    mul_s[idx], mul_e[idx], mul_fin_f[idx] = mullin_mul(vec_s, vec_e, vec_f,
-                                                        mtx_s[idx], mtx_e[idx], mtx_f[idx],
-                                                        mul_raw_f[idx], 8, 16)
-
-    #put the results back into the fraction wire..
-    mul_f[idx] = Wire(mul_fin_f[idx], Wire(0x00, 3))
+    mul_s[idx], mul_e[idx], mul_f[idx] = mullin_mul(vec_s, vec_e, vec_f,
+                                                    mtx_s[idx], mtx_e[idx], mtx_f[idx],
+                                                    mul_raw_f[idx], 8, 16)
   end
 
   #set aside wires that will be used for addition.
-  add_s::Vector{State}(8)
-  add_zer::Vector{SingleWire}(8)
-  add_sgn::Vector{SingleWire}(8)
-  add_provisional_exp::Vector{Wire{_E16}}(8)
-  add_provisional_frc::Vector{Wire{_F16}}(8)
-  add_exp::Vector{Wire{_E16}}(8)
-  add_frc::Vector{Wire{_F16}}(8)
+  add_s               = Vector{State}(8)
+  add_zer             = Vector{SingleWire}(8)
+  add_sgn             = Vector{SingleWire}(8)
+  add_provisional_exp = Vector{Wire{_E16}}(8)
+  add_provisional_frc = Vector{Wire{16:0v}}(8)
+  add_e               = Vector{Wire{_E16}}(8)
+  add_f               = Vector{Wire{_F16}}(8)
 
   for idx = 1:8
+
     #perform pre-shifting and adding the fractions for addition.  This may be replaced by a
     #different function in the future, that can accomodate different modes.
     add_sgn[idx], add_provisional_exp[idx], add_provisional_frc[idx] = mullin_frc_add(acc_s[idx], acc_e[idx], acc_f[idx],
@@ -90,10 +92,22 @@ function mullinrow(vec::Wire{14:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v})
     add_e[idx], add_f[idx] = mullin_addition_cleanup(add_sgn[idx], add_provisional_exp[idx], add_provisional_frc[idx], 16)
   end
 
+#=
+  println("mul_f:", mul_f[1])
+  println("acc_f:", acc_f[1])
+  println("adp_f:", add_provisional_frc[1][msb-2:0v])
+  println("add_f:", add_f[1])
+  printer(:vec, vec_s, vec_e, vec_f, 8)
+  printer(:mtx, mtx_s[1], mtx_e[1], mtx_f[1], 8)
+  printer(:mul, mul_s[1], mul_e[1], mul_f[1], 16)
+  printer(:acc, acc_s[1], acc_e[1], acc_f[1], 16)
+  printer(:add, add_s[1], add_e[1], add_f[1], 16)
+=#
+
   #output wires
-  out_s::Vector{State}(8)
-  out_e::Vector{Wire{_E16}}(8)
-  out_f::Vector{Wire{_F16}}(8)
+  out_s = Vector{State}(8)
+  out_e = Vector{Wire{_E16}}(8)
+  out_f = Vector{Wire{_F16}}(8)
   for idx = 1:8
     #for now, do this.  Later we'll implement other routines here that can
     #accomodate other types of operations.
@@ -102,5 +116,5 @@ function mullinrow(vec::Wire{14:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v})
     out_f[idx] = add_f[idx]
   end
 
-  Wire([Wire(out_s[idx], out_e[idx], out_f[idx]) for idx in 1:8]...)
+  Wire([Wire(out_s[idx], out_e[idx], out_f[idx]) for idx in 8:-1:1]...)
 end
