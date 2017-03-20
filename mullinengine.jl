@@ -28,6 +28,8 @@ srand(1)
 
 include("./mullinrow/mullinrow.v.jl")
 include("./mullinrow/mullintest.jl")
+include("./mullinrow/mullintest-1row.jl")
+include("./mullinrow/mullintest-2row.jl")
 
 #test_mullin_mul()
 #test_mullin_add()

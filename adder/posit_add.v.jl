@@ -106,24 +106,54 @@ doc"""
   leading_onehot
 end
 
-@verilog function add_rightshift(sub_frac::Wire, shift::Wire, bits::Integer)
-  @suffix             "$(bits)bit"
-  @input sub_frac     range(bits)
+doc"""
+  add_rightshift(fraction::Wire, shift::Wire, bits::Integer, extrabits = 0)
+
+  "fraction" should be of the same number of bits as *bits* - it should have
+  the following components:
+
+  | hidden bits | actual fraction | guard bit |
+  |   2 bits    |    (bits - 3)   |  1 bits   |
+
+  takes a wire and rightshifts it as part of an addition procedure.
+  outputs the shifted fraction and guard/summary bits.  This can take
+  extra bits of precision, if necessary.
+"""
+@verilog function add_rightshift(fraction::Wire, shift::Wire, bits::Integer, extrabits = 0)
+  @suffix             (extrabits == 0 ? "$(bits)bit" : "$(bits)p$(extrabits)bit")
+  @input fraction     range(bits + extrabits)
   @input shift        range(regime_bits(bits))
 
-  rightshifted_frac = sub_frac >>> shift
+  rightshifted_frac = fraction >>> shift
 
-  summary_wires = Wire{(bits - 1):2v}()
-  for idx = 2:(bits - 1)
-    #see if the shift corresponds.
-    summary_wires[idx] = (Wire(Unsigned(idx),regime_bits(bits)) == shift) & |(sub_frac[(idx - 1):1v])
+  #for each possible shift position, create a 'summary wire'.  The summary wire
+  #is then compared against the positional value and collated.
+  summary_wires = Wire{(bits - 1):1v}()
+  for shift_idx = 1:(bits - 1)
+    #TODO:  this algorithm may need to be reoptimized.
+    #if binarized shift value matches the value passed in, then save in that
+    #spot the or'd values of all spots preceding it.
+    summary_wires[idx] = (Wire(Unsigned(shift_idx),regime_bits(bits)) == shift) & |(fraction[(shift_idx - 1):0v])
   end
 
+  #collate all of the summary wires, check if the shift total is bigger than the
+  #total length (in which case we'd have at least moved over one of the hidden bits)
   summary_bit = |(summary_wires) | shift[msb]
 
-  rightshifted_gs = Wire(rightshifted_frac, summary_bit)
+  #extract the important information.  The new rightshifted fraction is the top
+  #bits of the value.  This is bits-2 because we are encoding the top two guard
+  #bits, bits - 3 fraction bits, and the guard bit into size (bits), usually.
+  #This needs to be relative to the MSB because there may be extra bits.
+  frac_rs = rightshifted_frac[msb:(msb-(bits-2))v]
+  #the guard bit is the subsequent value; the summary bit is all remaining value
+  #off the bottom of the fraction, or the summary bit.
+  if extrabits == 0
+    frac_gs = Wire(rightshifted_frac[msb-(bits-1)], summary_bit)
+  else
+    frac_gs = Wire(rightshifted_frac[msb-(bits-1)], rightshifted_frac[msb-bits:0v] | summary_bit)
+  end
 
-  rightshifted_gs
+  (frac_rs, frac_gs)
 end
 
 @verilog function add_theoretical(dom_exp::Wire, dom_frac::Wire, sub_exp::Wire, sub_frac::Wire, bits::Integer)

@@ -6,9 +6,13 @@ doc"""
   exp_trim(sign::SingleWire, exp_untrimmed::Wire, frc_untrimmed::Wire, bits::Integer, pad::Integer, guardshift::Symbol = Symbol(""))
 
   takes a (potentially negative) untrimmed exponent value.  This value should be
-  padded with at least 1 bit.  The result will be a fused exp-frac value that
-  is appropriately trimmed down.  frc_untrimmed should have both guard and
-  summary bits appended.
+  padded with at least 1 bit that is the result of the exponent calculations.
+  Since multiplication can 2x the biased exponent value, there should be 1 bit
+  of value padding and 1 bit for the sign.  Addition cannot exceed the biased
+  exponent value and should have 1 padding bit for sign (can go negative due to
+  subtraction recession).
+
+  This function returns three values:  Trimmed exponent, Trimmed Fraction, guard/summary
 
   for addition       (mode :add), padding: 1 bit
   for multiplication (mode :mul), padding: 2 bits

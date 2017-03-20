@@ -3,9 +3,9 @@
   @suffix         "$(bits)"
   @input frc      range(bits)
 
-  should_carry = (frc[1] & frc[2]) | (frc[2] & frc[3])
-  rounded_frc  = frc[msb:3v] + Wire(Wire(zero(UInt64), bits-4), should_carry)
-  augmented_frc = Wire(sgn, ~sgn, rounded_frc, Wire(false))
+  #should_carry = (frc[1] & frc[2]) | (frc[2] & frc[3])
+  rounded_frc  = frc[msb:2v]# + Wire(Wire(zero(UInt64), bits-4), should_carry)
+  augmented_frc = Wire(sgn, ~sgn, rounded_frc)
 end
 
 
@@ -25,8 +25,14 @@ end
   mul_sgn = mul_s[0]
 
   #create augmented accumulator and multiplier fractions.  This also rounds them.
+
+  println("acf:", acc_f)
+
   a_acc_f = mullin_add_augment(acc_sgn, acc_f, bits)
   a_mul_f = mullin_add_augment(mul_sgn, mul_f, bits)
+
+  printer(:acd, acc_s, acc_e, Wire(a_acc_f[msb-2:0v], Wire(0x0,2)), 16)
+  println("aacf:", a_acc_f)
 
   #zero it out if the corresponding side is zero.
   z_acc_f = a_acc_f & (bits * (~acc_zer))
@@ -39,6 +45,8 @@ end
   res_sgn = (acc_wins & acc_sgn) | (mul_wins & mul_sgn) | (acc_sgn & mul_sgn)
   res_exp = acc_dom_exp          | mul_dom_exp
   res_frc = acc_dom_frc          | mul_dom_frc
+
+  println("res_frc:", res_frc)
 
   (res_sgn, res_exp, res_frc)
 end
@@ -70,6 +78,8 @@ doc"""
   #extract a one-hot shift analysis from the provisional sum.
   frc_shift_onehot = add_shift_onehot(sgn, provisional_frc, bits)
 
+  println("prov_frc", provisional_frc)
+
   sum_frc_untrimmed = add_apply_shift(provisional_frc, frc_shift_onehot, bits)
 
   #calculate the exponent difference that will happen due to a shift.  For
@@ -80,11 +90,15 @@ doc"""
   #apply this difference to the provisional exponent.
   sum_exp_untrimmed = add_exp_diff(provisional_exp, sum_exp_diff, bits)
 
+  println("sfu:", sum_frc_untrimmed)
 
   #trim overflow and underflow exponents
   (sum_exp, sum_frc_trimmed, sum_gs) = exp_trim(sgn, sum_exp_untrimmed, sum_frc_untrimmed, bits, :add)
 
-  sum_frc = Wire(sum_frc_trimmed, sum_gs, Wire(false))
+  sum_frc_trimmed = Wire(0b1110000000011, 13)
+  sum_gs = Wire(0x2, 2)
+
+  sum_frc = Wire(sum_frc_trimmed, sum_gs[1], sum_gs[0], Wire(false))
 
   #NB: in the future, this will also need to send error flags to the processor.
   (sum_exp, sum_frc)
