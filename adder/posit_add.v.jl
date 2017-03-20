@@ -133,7 +133,7 @@ doc"""
     #TODO:  this algorithm may need to be reoptimized.
     #if binarized shift value matches the value passed in, then save in that
     #spot the or'd values of all spots preceding it.
-    summary_wires[idx] = (Wire(Unsigned(shift_idx),regime_bits(bits)) == shift) & |(fraction[(shift_idx - 1):0v])
+    summary_wires[shift_idx] = (Wire(Unsigned(shift_idx),regime_bits(bits)) == shift) & |(fraction[(shift_idx - 1):0v])
   end
 
   #collate all of the summary wires, check if the shift total is bigger than the
@@ -156,13 +156,13 @@ doc"""
   (frac_rs, frac_gs)
 end
 
-@verilog function add_theoretical(dom_exp::Wire, dom_frac::Wire, sub_exp::Wire, sub_frac::Wire, bits::Integer)
-  @suffix             "$(bits)bit"
+@verilog function add_theoretical(dom_exp::Wire, dom_frac::Wire, sub_exp::Wire, sub_frac::Wire, bits::Integer, extra_bits = 0)
+  @suffix              (extrabits == 0 ? "$(bits)bit" : "$(bits)p$(extrabits)bit")
   #we are going to assume that the dominant exponent wins out (but that may not necssarily be true)
   @input dom_exp      range(regime_bits(bits))
-  @input dom_frac     range(bits)
+  @input dom_frac     range(bits + extra_bits)
   @input sub_exp      range(regime_bits(bits))
-  @input sub_frac     range(bits)
+  @input sub_frac     range(bits + extra_bits)
 
   edom_exp = Wire(Wire(false), dom_exp)
   esub_exp = Wire(Wire(false), sub_exp)
@@ -171,10 +171,10 @@ end
   nuke_me = sum_exp[msb]
   shift = sum_exp[(msb-1):0v]
 
-  shft_sub_frac = add_rightshift(sub_frac, shift, bits)
+  shft_sub_frac, sub_frac_gs = add_rightshift(sub_frac, shift, bits, extra_bits)
 
   #add the two fractions together.
-  sum_frac = Wire(dom_frac, Wire(false)) + shft_sub_frac
+  sum_frac = Wire(dom_frac, Wire(false)) + Wire(shft_sub_frac, sub_frac_gs)
 
   #check if the top bit of the fraction matches the top bit of the dominant value
   #this indicates if the dominant value "won" the sign matchup in the fraction

@@ -26,13 +26,13 @@ end
 
   #create augmented accumulator and multiplier fractions.  This also rounds them.
 
-  println("acf:", acc_f)
+  #println("acf:", acc_f)
 
   a_acc_f = mullin_add_augment(acc_sgn, acc_f, bits)
   a_mul_f = mullin_add_augment(mul_sgn, mul_f, bits)
 
-  printer(:acd, acc_s, acc_e, Wire(a_acc_f[msb-2:0v], Wire(0x0,2)), 16)
-  println("aacf:", a_acc_f)
+  #printer(:acd, acc_s, acc_e, Wire(a_acc_f[msb-2:0v], Wire(0x0,2)), 16)
+  #println("aacf:", a_acc_f)
 
   #zero it out if the corresponding side is zero.
   z_acc_f = a_acc_f & (bits * (~acc_zer))
@@ -46,7 +46,7 @@ end
   res_exp = acc_dom_exp          | mul_dom_exp
   res_frc = acc_dom_frc          | mul_dom_frc
 
-  println("res_frc:", res_frc)
+  #println("res_frc:", res_frc)
 
   (res_sgn, res_exp, res_frc)
 end
@@ -78,7 +78,7 @@ doc"""
   #extract a one-hot shift analysis from the provisional sum.
   frc_shift_onehot = add_shift_onehot(sgn, provisional_frc, bits)
 
-  println("prov_frc", provisional_frc)
+  #println("prov_frc", provisional_frc)
 
   sum_frc_untrimmed = add_apply_shift(provisional_frc, frc_shift_onehot, bits)
 
@@ -90,7 +90,7 @@ doc"""
   #apply this difference to the provisional exponent.
   sum_exp_untrimmed = add_exp_diff(provisional_exp, sum_exp_diff, bits)
 
-  println("sfu:", sum_frc_untrimmed)
+  #println("sfu:", sum_frc_untrimmed)
 
   #trim overflow and underflow exponents
   (sum_exp, sum_frc_trimmed, sum_gs) = exp_trim(sgn, sum_exp_untrimmed, sum_frc_untrimmed, bits, :add)

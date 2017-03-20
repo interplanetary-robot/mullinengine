@@ -93,17 +93,17 @@ function mullinrow(vec::Wire{14:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v})
   end
 
 
-  println("mul_e:", mul_e[__VSAMP_ID])
-  println("mul_f:", mul_f[__VSAMP_ID])
-  println("acc_e:", acc_e[__VSAMP_ID])
-  println("acc_f:", acc_f[__VSAMP_ID])
+  #println("mul_e:", mul_e[__VSAMP_ID])
+  #println("mul_f:", mul_f[__VSAMP_ID])
+  #println("acc_e:", acc_e[__VSAMP_ID])
+  #println("acc_f:", acc_f[__VSAMP_ID])
   #println("adp_f:", add_provisional_frc[7][msb-2:0v])
   #println("add_f:", add_f[7])
   #printer(:vec, vec_s, vec_e, vec_f, 8)
   #printer(:mtx, mtx_s[7], mtx_e[7], mtx_f[7], 8)
-  printer(:mul, mul_s[__VSAMP_ID], mul_e[__VSAMP_ID], mul_f[__VSAMP_ID], 16)
-  printer(:acc, acc_s[__VSAMP_ID], acc_e[__VSAMP_ID], acc_f[__VSAMP_ID], 16)
-  printer(:add, add_s[__VSAMP_ID], add_e[__VSAMP_ID], add_f[__VSAMP_ID], 16)
+  #printer(:mul, mul_s[__VSAMP_ID], mul_e[__VSAMP_ID], mul_f[__VSAMP_ID], 16)
+  #printer(:acc, acc_s[__VSAMP_ID], acc_e[__VSAMP_ID], acc_f[__VSAMP_ID], 16)
+  #printer(:add, add_s[__VSAMP_ID], add_e[__VSAMP_ID], add_f[__VSAMP_ID], 16)
 
   #output wires
   out_s = Vector{State}(8)

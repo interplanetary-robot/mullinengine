@@ -156,40 +156,6 @@ module add_zero_checker_8bit(
 endmodule
 
 
-module add_theoretical_8bit(
-  input [3:0] dom_exp,
-  input [7:0] dom_frac,
-  input [3:0] sub_exp,
-  input [7:0] sub_frac,
-  output fraction_win,
-  output [3:0] provisional_exp,
-  output [8:0] provisional_frac);
-
-  wire [8:0] shft_sub_frac;
-  wire [4:0] sum_exp;
-  wire nuke_me;
-  wire [4:0] esub_exp;
-  wire [4:0] edom_exp;
-  wire [3:0] shift;
-  wire [8:0] sum_frac;
-
-  add_rightshift_8bit add_rightshift_8bit_shft_sub_frac(
-    .sub_frac (sub_frac),
-    .shift (shift),
-    .rightshifted_gs (shft_sub_frac));
-
-  assign edom_exp = {1'b0,dom_exp};
-  assign esub_exp = {1'b0,sub_exp};
-  assign sum_exp = (edom_exp - esub_exp);
-  assign nuke_me = sum_exp[4];
-  assign shift = sum_exp[3:0];
-  assign sum_frac = ({dom_frac,1'b0} + shft_sub_frac);
-  assign fraction_win = ~(((dom_frac[7] ^ sum_frac[8]) | nuke_me));
-  assign provisional_exp = (dom_exp & {4{~(nuke_me)}});
-  assign provisional_frac = (sum_frac & {9{~(nuke_me)}});
-endmodule
-
-
 module exp_trim_8bit_add(
   input sign,
   input [4:0] exp_untrimmed,
@@ -239,6 +205,42 @@ module add_shift_onehot_8bit(
 endmodule
 
 
+module add_theoretical_8bit(
+  input [3:0] dom_exp,
+  input [7:0] dom_frac,
+  input [3:0] sub_exp,
+  input [7:0] sub_frac,
+  output fraction_win,
+  output [3:0] provisional_exp,
+  output [8:0] provisional_frac);
+
+  wire [6:0] shft_sub_frac;
+  wire [1:0] sub_frac_gs;
+  wire [4:0] sum_exp;
+  wire nuke_me;
+  wire [4:0] esub_exp;
+  wire [4:0] edom_exp;
+  wire [3:0] shift;
+  wire [8:0] sum_frac;
+
+  add_rightshift_8bit add_rightshift_8bit_shft_sub_frac_sub_frac_gs(
+    .fraction (sub_frac),
+    .shift (shift),
+    .frac_rs (shft_sub_frac),
+    .frac_gs (sub_frac_gs));
+
+  assign edom_exp = {1'b0,dom_exp};
+  assign esub_exp = {1'b0,sub_exp};
+  assign sum_exp = (edom_exp - esub_exp);
+  assign nuke_me = sum_exp[4];
+  assign shift = sum_exp[3:0];
+  assign sum_frac = ({dom_frac,1'b0} + {shft_sub_frac,sub_frac_gs});
+  assign fraction_win = ~(((dom_frac[7] ^ sum_frac[8]) | nuke_me));
+  assign provisional_exp = (dom_exp & {4{~(nuke_me)}});
+  assign provisional_frac = (sum_frac & {9{~(nuke_me)}});
+endmodule
+
+
 module add_exp_diff_8bit(
   input [3:0] old_exp,
   input [4:0] exp_delta,
@@ -276,23 +278,26 @@ endmodule
 
 
 module add_rightshift_8bit(
-  input [7:0] sub_frac,
+  input [7:0] fraction,
   input [3:0] shift,
-  output [8:0] rightshifted_gs);
+  output [6:0] frac_rs,
+  output [1:0] frac_gs);
 
   wire [7:0] rightshifted_frac;
-  wire [7:2] summary_wires;
+  wire [7:1] summary_wires;
   wire summary_bit;
 
-  assign rightshifted_frac = ($signed(sub_frac) >>> shift);
-  assign summary_wires[2] = ((4'b0010 == shift) & sub_frac[1]);
-  assign summary_wires[3] = ((4'b0011 == shift) & |(sub_frac[2:1]));
-  assign summary_wires[4] = ((4'b0100 == shift) & |(sub_frac[3:1]));
-  assign summary_wires[5] = ((4'b0101 == shift) & |(sub_frac[4:1]));
-  assign summary_wires[6] = ((4'b0110 == shift) & |(sub_frac[5:1]));
-  assign summary_wires[7] = ((4'b0111 == shift) & |(sub_frac[6:1]));
+  assign rightshifted_frac = ($signed(fraction) >>> shift);
+  assign summary_wires[1] = ((4'b0001 == shift) & fraction[0]);
+  assign summary_wires[2] = ((4'b0010 == shift) & |(fraction[1:0]));
+  assign summary_wires[3] = ((4'b0011 == shift) & |(fraction[2:0]));
+  assign summary_wires[4] = ((4'b0100 == shift) & |(fraction[3:0]));
+  assign summary_wires[5] = ((4'b0101 == shift) & |(fraction[4:0]));
+  assign summary_wires[6] = ((4'b0110 == shift) & |(fraction[5:0]));
+  assign summary_wires[7] = ((4'b0111 == shift) & |(fraction[6:0]));
   assign summary_bit = (|(summary_wires) | shift[3]);
-  assign rightshifted_gs = {rightshifted_frac,summary_bit};
+  assign frac_rs = rightshifted_frac[7:1];
+  assign frac_gs = {rightshifted_frac[0],summary_bit};
 endmodule
 
 module posit_adder_8bit(
