@@ -39,9 +39,6 @@ function mullin_2row_wrapper(acc1_d_w::Vector{Wire{15:0v}}, mtx1_d_w::Vector{Wir
   row_answer
 end
 
-const __SAMPLE_ID = 3
-const __VSAMP_ID = 9 - __SAMPLE_ID
-
 function test_mullin_2rows()
   #do this 1:1000
   for round in 1:1000

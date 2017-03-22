@@ -125,37 +125,3 @@ function test_mullin_add()
   end
   println("OK.")
 end
-
-#a test wrapper for adding values with carried GS values.
-
-@verilog function mullin_add_tester(lhs_s::Wire{2:0v}, lhs_e::Wire{4:0v}, lhs_f::Wire{15:0v},
-                                    rhs_s::Wire{2:0v}, rhs_e::Wire{4:0v}, rhs_f::Wire{15:0v})
-
-  #perform pre-shifting and adding the fractions for addition.  This may be replaced by a
-  #different function in the future, that can accomodate different modes.
-  add_sgn, add_provisional_exp, add_provisional_frc = mullin_frc_add(lhs_s, lhs_e, lhs_f,
-                                                                     rhs_s, rhs_e, rhs_f, 16)
-
-  #check for zeros.
-  add_zer = add_zero_checker(lhs_s[0], lhs_e, lhs_f[msb:3v],
-                             rhs_s[0], rhs_e, rhs_f[msb:3v], 16)
-
-  #set result state variables.
-  add_s   = mullin_addition_state(lhs_s, rhs_s, add_sgn, add_zer)
-
-  #then do post-shift adjustment stuff.
-  add_exp, add_frc = mullin_addition_cleanup(add_sgn, add_provisional_exp, add_provisional_frc, 16)
-
-  #println("add_frc:", add_frc[msb:3v])
-  #println("add_frc_gs:", add_frc[2:1v])
-
-  #for analysis.  In the "actual" function this will be put back into the accumulator.
-  rhs_dec = encode_posit(add_s[2], add_s[1], add_s[0], add_exp, add_frc[msb:3v], add_frc[2:1v], 16)
-end
-
-#test discovered error with passing the gs bits from the accumulator.
-#errors discovered 19 mar 2017, as a part of chaining multiple mullin rows.
-
-
-@test mullin_add_tester(0x0, 0x10, 0x900e, 0x1, 0x11, 0xf000) == 0xbc04
-@test mullin_add_tester(0x1, 0x11, 0x0014, 0x0, 0x10, 0x7f80) == 0x8dff

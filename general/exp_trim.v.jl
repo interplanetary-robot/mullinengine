@@ -17,17 +17,17 @@ doc"""
   for addition       (mode :add), padding: 1 bit
   for multiplication (mode :mul), padding: 2 bits
 """
-@verilog function exp_trim(sign::SingleWire, exp_untrimmed::Wire, frc_untrimmed::Wire, bits::Integer, mode::Symbol)
+@verilog function exp_trim(sign::SingleWire, exp_untrimmed::Wire, frc_untrimmed::Wire, bits::Integer, mode::Symbol, extrabits = 0)
   @assert ispow2(bits)
-  @suffix               "$(bits)bit_$(mode)"
+  @suffix               (extrabits == 0 ? "$(bits)bit_$(mode)" : "$(bits)p$(extrabits)bit_$(mode)")
 
   @input exp_untrimmed  range(regime_bits(bits) + exp_padding[mode])
-  @input frc_untrimmed  range(bits - 1)
+  @input frc_untrimmed  range(bits - 1 + extrabits)
 
   #create some invariant values.
   upper_limit_value = max_biased_exp(bits)
   expbits = regime_bits(bits)
-  frcbits = bits - 1
+  frcbits = bits - 1 + extrabits
   pad = exp_padding[mode]
 
   #store these as "constant wires" (for now.  When we have ES, then these will

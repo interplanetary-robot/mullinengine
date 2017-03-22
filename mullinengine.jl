@@ -27,13 +27,17 @@ include("./adder/posit_add_test.cg.jl")  #for now, can only test one at a time.
 
 srand(1)
 
+#for restricted printing options
+const __SAMPLE_ID = 5
+const __VSAMP_ID = 9 - __SAMPLE_ID
+
 include("./mullinrow/mullinrow.v.jl")
 include("./mullinrow/mullintest.jl")
 include("./mullinrow/mullintest-1row.jl")
 include("./mullinrow/mullintest-2row.jl")
 
 #test_mullin_mul()
-test_mullin_add()
+#test_mullin_add()
 
-#test_mullin_row()
+test_mullin_row()
 #test_mullin_2rows()

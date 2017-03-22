@@ -19,7 +19,10 @@ function mullin_row_wrapper(acc_d_w::Vector{Wire{15:0v}}, mtx_d_w::Vector{Wire{7
     #pull the temporary row values.
     temp_row = row_result[(idx * 24 - 1):((idx-1) * 24)v]
 
-    row_answer[9-idx] = Unsigned(encode_posit(temp_row[23], temp_row[22], temp_row[21], temp_row[20:16v], temp_row[15:3v], temp_row[2:1v], 16))
+    #the gs bits are a little bit different.
+    temp_gs = Wire(temp_row[2], temp_row[1] | temp_row[0])
+
+    row_answer[9-idx] = Unsigned(encode_posit(temp_row[23], temp_row[22], temp_row[21], temp_row[20:16v], temp_row[15:3v], temp_gs, 16))
   end
   row_answer
 end
