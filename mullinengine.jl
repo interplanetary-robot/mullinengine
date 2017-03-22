@@ -11,10 +11,8 @@ include("./multiplier/posit_mult.v.jl")
 include("./adder/posit_add.v.jl")
 
 
-#@test add_theoretical(0b0111, 0b01_11111, 0b0111, 0b01_00000, 8) == 0b1_0111_010_111110
-
-#=
 #testing suite
+#=
 include("./general/methods_testing.jl")
 include("./decoder/posit_decode_test.jl")
 include("./encoder/posit_encode_test.jl")
@@ -23,9 +21,9 @@ include("./adder/posit_add_test.jl")
 @time test_8bit_add()
 @time test_8bit_mul()
 include("./adder/posit_add_test.cg.jl")  #for now, can only test one at a time.
+=#
 #include("./multiplier/posit_mult_test.cg.jl")
 #work with the mullin engine proper.
-=#
 
 srand(1)
 

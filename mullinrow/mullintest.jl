@@ -136,8 +136,6 @@ end
   add_sgn, add_provisional_exp, add_provisional_frc = mullin_frc_add(lhs_s, lhs_e, lhs_f,
                                                                      rhs_s, rhs_e, rhs_f, 16)
 
-  #println("add_provisional_frc:", add_provisional_frc)
-
   #check for zeros.
   add_zer = add_zero_checker(lhs_s[0], lhs_e, lhs_f[msb:3v],
                              rhs_s[0], rhs_e, rhs_f[msb:3v], 16)
@@ -157,12 +155,7 @@ end
 
 #test discovered error with passing the gs bits from the accumulator.
 #errors discovered 19 mar 2017, as a part of chaining multiple mullin rows.
-#@test mullin_add_tester(0x1, 0x11, 0x0014, 0x0, 0x10, 0x7f80) == 0x8dff
-#println("--------")
-#
-#rs = add_rightshift(0x900e, 0x01, 16)
-#println(hex(rs,4))
-#
-#@test mullin_add_tester(0x0, 0x10, 0x900e, 0x1, 0x11, 0xf000) == 0xbc04
-#exit()
-#println("========")
+
+
+@test mullin_add_tester(0x0, 0x10, 0x900e, 0x1, 0x11, 0xf000) == 0xbc04
+@test mullin_add_tester(0x1, 0x11, 0x0014, 0x0, 0x10, 0x7f80) == 0x8dff

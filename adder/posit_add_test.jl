@@ -28,6 +28,7 @@
 @test add_shift_diff(0b100_0000, 8) == 0b11011
 
 #test shifting fractional values
+#=
 @test add_rightshift(0b010_0001_0, 0b0000, 8) == 0b010_0001_00
 @test add_rightshift(0b010_0001_0, 0b0001, 8) == 0b001_0000_10
 @test add_rightshift(0b010_0001_0, 0b0010, 8) == 0b000_1000_01
@@ -39,13 +40,16 @@
 @test add_rightshift(0b010_0001_0, 0b1000, 8) == 0b000_0000_01
 @test add_rightshift(0b010_0001_0, 0b1001, 8) == 0b000_0000_01
 @test add_rightshift(0b010_0001_0, 0b1010, 8) == 0b000_0000_01
+=#
 
 #test applying shifts:
 @test add_apply_shift(0b01_10000_00, 0b0000010, 8) == 0b10000_00
 
 #test the actual adding procedure
+#=
 @test add_theoretical(0b0111, 0b01_11111, 0b0111, 0b01_00000, 8) == 0b1_0111_010_111110
 @test add_theoretical(0b0111, 0b01_11111, 0b0111, 0b01_00001, 8) == 0b1_0111_011_000000
+=#
 
 function test_8bit_add()
   print("testing 8 bit add...")
