@@ -30,6 +30,7 @@ end
 prettyfloat(x) = string(Float64(x),"          ")[1:7]
 
 function test_mullin_row()
+  more_accurate_count = 0
   #do this 1:1000
   for round in 1:1000
     acc_d_i = [rand(0x0000:0xFFFF) for idx in 1:8]
@@ -65,6 +66,8 @@ function test_mullin_row()
 
         if isfinite(posit_result_f) && isfinite(mullin_result_f) && isfinite(float_true_value)
           @test abs(posit_result_f - float_true_value) >= abs(mullin_result_f - float_true_value)
+
+          more_accurate_count += abs(posit_result_f - float_true_value) > abs(mullin_result_f - float_true_value)
         end
       end
 
@@ -77,4 +80,6 @@ function test_mullin_row()
       rethrow()
     end
   end
+
+  println("percentage better: ", more_accurate_count / 80, "%")
 end

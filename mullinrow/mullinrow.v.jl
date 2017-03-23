@@ -10,13 +10,50 @@ _E08 = 3:0v
 _F16 = 15:0v
 _E16 = 4:0v
 
+doc"""
+  round_accumulator(acc_s, ur_acc_e, ur_acc_f, bits)
+  rounds accumulator wires.  fraction input format:
+
+  | MSB...  unrounded fraction  ...LSB |      guard bits      | summary bit |
+  |           (bits - 3) bit           |        2 bits        |    1 bit    |
+
+  fraction return format.  The fraction will be rounded to the nearest
+  guard bit.
+
+  | MSB...   rounded fraction   ...LSB | guard bit |        zeros           |
+  |           (bits - 3) bit           |   1 bit   |        2 bits          |
+
+"""
+@verilog function round_accumulator(acc_s::State, ur_acc_e::Wire, ur_acc_f::Wire, bits)
+  @suffix                  "_$(bits)bit"
+  @input ur_acc_e          range(regime_bits(bits))
+  @input ur_acc_f          range(bits)
+
+  #check the last bits of the accumulator fraction to determine if rounding rules
+  #apply.
+  should_round = (ur_acc_f[2] & ur_acc_f[1]) | (ur_acc_f[1] & ur_acc_f[0])
+  #next augment or decrement the fraction as necessary.
+  acc_f = Wire(ur_acc_f[msb:2v] + (bits - 2) * Wire(false), Wire(0x0, 2))
+  # check to see if we need to change the exponent.  This only happens if
+  # we roll over on the fraction value
+  # a corner case is if it's negative and the exponent is zero, where we should
+  # also do nothing.
+  neg_zero_exp = ~(|(ur_acc_e))
+  augment_exp = ~(|(acc_f) | neg_zero_exp) & should_round
+  #create the augment variable (+/-) 1, or mask it out to all zeros.
+  exp_augment_value = Wire((regime_bits(bits) - 1) * acc_s[0], Wire(true)) & (regime_bits(bits) * augment_exp)
+  #output the acc_e
+  acc_e = ur_acc_e + exp_augment_value
+
+  (acc_e, acc_f)
+end
 
 function printer(name, s, e, f, bits)
   println(name, ": P(0x", hex(Unsigned(encode_posit(s[2], s[1], s[0], e, f[msb:3v], f[2:1v], bits)),bits ÷ 4), ")")
 end
 
 doc"""
-  function mullinrow(vec_s, vec_e, vec_f, acc_s, acc_f, acc_e, mul_s, mul_e, mul_f, mode, rownumber, flags)
+  mullinrow(vec_s, vec_e, vec_f, acc_s, acc_f, acc_e, mul_s, mul_e, mul_f, mode, rownumber, flags)
 """                #state variables           #exponent variables        #fraction variables
 function mullinrow(vec::Wire{14:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v})
 
@@ -30,6 +67,10 @@ function mullinrow(vec::Wire{14:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v})
   acc_e = Vector{Wire{_E16}}(8)
   acc_f = Vector{Wire{_F16}}(8)
 
+  #created unrounded accumulators
+  ur_acc_e = Vector{Wire{_E16}}(8)
+  ur_acc_f = Vector{Wire{_F16}}(8)
+
   #set muliplier values.
   mtx_s = Vector{State}(8)
   mtx_e = Vector{Wire{_E08}}(8)
@@ -38,8 +79,10 @@ function mullinrow(vec::Wire{14:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v})
   #assign these lines.  Make sure the top one is the first value.
   for idx = 1:8
     acc_s[idx] = acc[(24 * idx - 1):(24 * idx - 3)v]
-    acc_e[idx] = acc[(24 * idx - 4):(24 * idx - 8)v]
-    acc_f[idx] = acc[(24 * idx - 9):(24 * idx - 24)v]
+    ur_acc_e[idx] = acc[(24 * idx - 4):(24 * idx - 8)v]
+    ur_acc_f[idx] = acc[(24 * idx - 9):(24 * idx - 24)v]
+
+    acc_e[idx], acc_f[idx] = round_accumulator(acc_s[idx], ur_acc_e[idx], ur_acc_f[idx], 16)
 
     mtx_s[idx] = mtx[(15 * idx - 1):(15 * idx - 3)v]
     mtx_e[idx] = mtx[(15 * idx - 4):(15 * idx - 7)v]

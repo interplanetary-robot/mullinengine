@@ -18,15 +18,6 @@ function mullin_2row_wrapper(acc1_d_w::Vector{Wire{15:0v}}, mtx1_d_w::Vector{Wir
   this_vec2 = Wire(decode_posit(vec2_d_w, 8), Wire(0x0, 3))
 
   acc2_wire = mullinrow(this_vec1, acc1_wire, mtx1_wire)
-
-  #sample one data point for debugging purposes.
-  temp_row = acc2_wire[(__VSAMP_ID * 24 - 1):((__VSAMP_ID-1) * 24)v]
-  sample = Unsigned(encode_posit(temp_row[23], temp_row[22], temp_row[21], temp_row[20:16v], temp_row[15:3v],temp_row[2:1v], 16))
-  println("frc:", temp_row[15:0v])
-  println("sample:", hex(sample, 4))
-
-  println("-----------------------------")
-
   acc3_wire = mullinrow(this_vec2, acc2_wire, mtx2_wire)
 
   row_answer = Vector{UInt64}(8)
@@ -40,6 +31,8 @@ function mullin_2row_wrapper(acc1_d_w::Vector{Wire{15:0v}}, mtx1_d_w::Vector{Wir
 end
 
 function test_mullin_2rows()
+  better_count = 0
+  worse_count = 0
   #do this 1:1000
   for round in 1:1000
     acc1_d_i = [rand(0x0000:0xFFFF) for idx in 1:8]
@@ -60,14 +53,6 @@ function test_mullin_2rows()
     vec1_d_p = Posit{16,0}(vec1_d_i)
     vec2_d_p = Posit{16,0}(vec2_d_i)
 
-    println("========================")
-
-    println("acc  = ", acc1_d_p[__SAMPLE_ID])
-    println("mtx1 = ", mtx1_d_p[__SAMPLE_ID])
-    println("mtx2 = ", mtx2_d_p[__SAMPLE_ID])
-    println("vec1 = ", vec1_d_p)
-    println("vec2 = ", vec2_d_p)
-
     try
       #get the wrapped results, should be Unsigned 64-bit ints.
       row_answer = mullin_2row_wrapper(acc1_d_w, mtx1_d_w, vec1_d_w,
@@ -83,7 +68,8 @@ function test_mullin_2rows()
                 " posit: ", prettyfloat(posit_result), " mullin: ", prettyfloat(mullin_result))
 
         if isfinite(true_value) && isfinite(posit_result) && isfinite(mullin_result)
-          @test abs(posit_result - true_value) >= abs(mullin_result - true_value)
+          better_count += abs(posit_result - true_value) > abs(mullin_result - true_value)
+          worse_count += abs(posit_result - true_value) < abs(mullin_result - true_value)
         end
       end
 
@@ -96,4 +82,7 @@ function test_mullin_2rows()
       rethrow()
     end
   end
+
+  println("fused better percentage: ", better_count / 80, "%")
+  println("sequential better percentage: ", worse_count / 80, "%")
 end
