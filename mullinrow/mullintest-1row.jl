@@ -1,9 +1,10 @@
 ################################################################################
 # testing a full mullin row.
-function mullin_row_wrapper(acc_d_w::Vector{Wire{15:0v}}, mtx_d_w::Vector{Wire{7:0v}}, vec_d_w::Wire{7:0v})
+function mullin_1row_wrapper(acc_d_w::Vector{Wire{15:0v}}, mtx_d_w::Vector{Wire{7:0v}}, vec_d_w::Wire{7:0v})
 
   acc_wire = Wire(decode_posit(acc_d_w[1], 16), Wire(0x0,3))
   mtx_wire = Wire(decode_posit(mtx_d_w[1], 8) , Wire(0x0,3))
+  vec_wire = Wire([Wire(decode_posit(Wire(0x0),8), Wire(0x0,3)) for idx = 1:7]..., decode_posit(vec_d_w, 8), Wire(0x0,3))
 
   for idx = 2:8
     acc_wire = Wire(acc_wire, decode_posit(acc_d_w[idx], 16), Wire(0x0,3))
@@ -12,7 +13,7 @@ function mullin_row_wrapper(acc_d_w::Vector{Wire{15:0v}}, mtx_d_w::Vector{Wire{7
 
   this_vec = Wire(decode_posit(vec_d_w, 8), Wire(0x0, 3))
 
-  row_result = mullinrow(this_vec, acc_wire, mtx_wire)
+  row_result = mullinrow(vec_wire, acc_wire, mtx_wire, 1)
 
   row_answer = Vector{UInt64}(8)
   for idx = 1:8
@@ -29,7 +30,7 @@ end
 
 prettyfloat(x) = string(Float64(x),"          ")[1:7]
 
-function test_mullin_row()
+function test_mullin_1row()
   more_accurate_count = 0
   #do this 1:1000
   for round in 1:1000
@@ -47,7 +48,7 @@ function test_mullin_row()
 
     try
       #get the wrapped results, should be Unsigned 64-bit ints.
-      row_answer = mullin_row_wrapper(acc_d_w, mtx_d_w, vec_d_w)
+      row_answer = mullin_1row_wrapper(acc_d_w, mtx_d_w, vec_d_w)
 
       for idx = 1:8
         #calculate the "true" value.

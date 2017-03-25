@@ -1,22 +1,32 @@
 #test add_shift_onehot - calculates the correct onehot shift indicators for
 #the representation.
-@test add_shift_onehot(0b0, 0b100000000, 8) == 0b000_0001
-@test add_shift_onehot(0b0, 0b101110100, 8) == 0b000_0001
-@test add_shift_onehot(0b0, 0b010111000, 8) == 0b000_0010
-@test add_shift_onehot(0b0, 0b001011100, 8) == 0b000_0100
-@test add_shift_onehot(0b0, 0b000101100, 8) == 0b000_1000
-@test add_shift_onehot(0b0, 0b000010100, 8) == 0b001_0000
-@test add_shift_onehot(0b0, 0b000001000, 8) == 0b010_0000
-@test add_shift_onehot(0b0, 0b000000100, 8) == 0b100_0000
+@test add_find_shift_onehot(0b0, 0b100000000, 8) == 0b000_0001
+@test add_find_shift_onehot(0b0, 0b101110100, 8) == 0b000_0001
+@test add_find_shift_onehot(0b0, 0b010111000, 8) == 0b000_0010
+@test add_find_shift_onehot(0b0, 0b001011100, 8) == 0b000_0100
+@test add_find_shift_onehot(0b0, 0b000101100, 8) == 0b000_1000
+@test add_find_shift_onehot(0b0, 0b000010100, 8) == 0b001_0000
+@test add_find_shift_onehot(0b0, 0b000001000, 8) == 0b010_0000
+@test add_find_shift_onehot(0b0, 0b000000100, 8) == 0b100_0000
+
+#=
+| hidden bits | MSB ...fraction... LSB | guard bit | (extra guard bits) | summary bit |
+|    2 bits   |    (bits - 3) bits     |   1 bit   |                    |    1 bit    |
+
+the resulting fraction is as follows:
+
+| MSB ...fraction... LSB | guard bit | summary bit |
+|     (bits - 3) bits    |   1 bit   |    1 bit    |
+=#
 
 #test applying a one-hot shift
-@test add_apply_shift(0b101110100, 0b000_0001, 8) == 0b000111010
-@test add_apply_shift(0b010111000, 0b000_0010, 8) == 0b000111000
-@test add_apply_shift(0b001011100, 0b000_0100, 8) == 0b000111000
-@test add_apply_shift(0b000101100, 0b000_1000, 8) == 0b000110000
-@test add_apply_shift(0b000010100, 0b001_0000, 8) == 0b000100000
-@test add_apply_shift(0b000001000, 0b010_0000, 8) == 0b000000000
-@test add_apply_shift(0b000000100, 0b100_0000, 8) == 0b000000000
+@test add_apply_shift(0b1011101_00, 0b000_0001, 8) == 0b01110_10
+@test add_apply_shift(0b0101110_00, 0b000_0010, 8) == 0b01110_00
+@test add_apply_shift(0b0010111_00, 0b000_0100, 8) == 0b01110_00
+@test add_apply_shift(0b0001011_00, 0b000_1000, 8) == 0b01100_00
+@test add_apply_shift(0b0000101_00, 0b001_0000, 8) == 0b01000_00
+@test add_apply_shift(0b0000010_00, 0b010_0000, 8) == 0b00000_00
+@test add_apply_shift(0b0000001_00, 0b100_0000, 8) == 0b00000_00
 
 #test reinterpreting one-hot shifts as deltas
 @test add_shift_diff(0b000_0001, 8) == 0b00001

@@ -10,9 +10,15 @@ include("./encoder/posit_encode.v.jl")
 include("./multiplier/posit_mult.v.jl")
 include("./adder/posit_add.v.jl")
 
+#=
+lhs = 0x05
+rhs = 0x60
+println(bits(posit_adder(lhs, rhs, 8)))
+exit()
+=#
 
 #testing suite
-#=
+
 include("./general/methods_testing.jl")
 include("./decoder/posit_decode_test.jl")
 include("./encoder/posit_encode_test.jl")
@@ -21,7 +27,7 @@ include("./adder/posit_add_test.jl")
 @time test_8bit_add()
 @time test_8bit_mul()
 include("./adder/posit_add_test.cg.jl")  #for now, can only test one at a time.
-=#
+
 #include("./multiplier/posit_mult_test.cg.jl")
 #work with the mullin engine proper.
 
@@ -35,8 +41,8 @@ include("./mullinrow/mullintest-1row.jl")
 include("./mullinrow/mullintest-2row.jl")
 include("./mullinrow/mullintest-8row.jl")
 
-#test_mullin_mul()
-#test_mullin_add()
+test_mullin_mul()
+test_mullin_add()
 
-#test_mullin_row()
-test_mullin_8rows()
+#test_mullin_1row()
+#test_mullin_8rows()

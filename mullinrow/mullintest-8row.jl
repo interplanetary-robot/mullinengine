@@ -1,34 +1,33 @@
 
-n2pw(n) = decode_posit(Wire(n, 16), 16)
+n2pw16(n) = decode_posit(Wire(n, 16), 16)
 n2pw8(n) = decode_posit(Wire(n, 8), 8)
 
 ################################################################################
 # testing a full mullin row.
-function mullin_8row_wrapper(accumulators::Vector{UInt16}, matrixvals::Matrix{UInt16}, vectorvals::Vector{UInt16})
-  accwire = Wire(n2pw(accumulators[1]), Wire(0x0,3))
+function mullin_nrow_wrapper(accumulators::Vector{UInt16}, matrixvals::Matrix{UInt16}, vectorvals::Vector{UInt16}, rows)
+  accwire = Wire(n2pw16(accumulators[1]), Wire(0x0,3))
 
   mtxwire = Vector{Wire}(8)
   for idx = 1:8
     mtxwire[idx] = Wire(n2pw8(matrixvals[1, idx] >> 8), Wire(0x0,3))
   end
 
+  vecwire = Vector{Wire}(8)
+  vecwire = Wire(n2pw8(vectorvals[1] >> 8), Wire(0x0, 3))
+
   #assemble the wires!
   for idx = 2:8
-    accwire = Wire(accwire, n2pw(accumulators[idx]), Wire(0x0,3))
+    accwire = Wire(accwire, n2pw16(accumulators[idx]), Wire(0x0,3))
 
     for jdx = 1:8
       mtxwire[jdx] = Wire(mtxwire[jdx], n2pw8(matrixvals[idx, jdx] >> 8), Wire(0x0,3))
     end
+
+    vecwire = Wire(n2pw8(vectorvals[idx] >> 8), Wire(0x0,3), vecwire)
   end
 
-#  for idx = 1:8
-#    println(mtxwire[idx])
-#  end
-#  exit()
-
   for idx = 1:8
-    this_vec = Wire(n2pw8(vectorvals[idx] >> 8), Wire(0x0, 3))
-    accwire = mullinrow(this_vec, accwire, mtxwire[idx])
+    accwire = mullinrow(vecwire, accwire, mtxwire[idx], idx)
   end
 
   row_answer = Vector{UInt64}(8)
@@ -64,7 +63,7 @@ function test_mullin_8rows()
       res_f = Float64.(matrixvals_p) * Float64.(vectorvals_p) + Float64.(accumulators_p)
 
       #get the wrapped results, should be Unsigned 64-bit ints.
-      row_answer = mullin_8row_wrapper(accumulators_i, matrixvals_i, vectorvals_i)
+      row_answer = mullin_nrow_wrapper(accumulators_i, matrixvals_i, vectorvals_i, rows)
 
       #broadcast the row to be 16-bit posit
       res_m = Float64.(P16.(row_answer))

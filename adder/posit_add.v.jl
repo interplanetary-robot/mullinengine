@@ -36,7 +36,7 @@ doc"""
   delivered as follows:
 
   | hidden bits | MSB ...fraction... LSB | guard bit | (extra guard bits) | summary bit |
-  |    2 bits   |   (2 * bits - 6) bit   |   1 bit   |                    |    1 bit    |
+  |    2 bits   |     (bits - 3) bit     |   1 bit   |                    |    1 bit    |
 
   the resulting fraction is as follows:
 
@@ -51,7 +51,7 @@ doc"""
 """
 @verilog function add_apply_shift(efraction::Wire, shift_onehot::Wire, bits::Integer, extrabits = 0)
   @suffix                 "$(bits)bit"
-  @input efraction        range(bits + 2)
+  @input efraction        range(bits + 1 + extrabits)
   @input shift_onehot     range(bits)
   #biased one-hot-shift:  0 - shift right one
   #                       1 - no shift
@@ -67,12 +67,14 @@ doc"""
 
   mv = length(shifted_fraction)
 
-  for idx in range(bits + extrabits - 2)
-    shifted_fraction[msb-idx] = |([shift_onehot[jdx] & efraction[msb - (1 + idx + jdx)] for jdx in 0:(bits - idx - 1)]...)
+  for idx in range(bits + extrabits - 3)
+    shifted_fraction[msb-idx] = |([shift_onehot[jdx] & efraction[msb - (1 + idx + jdx)] for jdx in 0:(bits + extrabits - idx - 2)]...)
   end
 
-  #create a summary lines variable.  Summarization only happens if we shift left.
-  summary_lines = efraction[0] | (efraction[1] & shift_onehot[0])
+  shifted_fraction[1] = |(shift_onehot[0] & efraction[2], shift_onehot[1] & efraction[1], shift_onehot[2] & efraction[0])
+
+  #create a summary lines variable.  Summarization only happens if we shift left or keep the summary from a no-shift
+  summary_lines = ((efraction[1] | efraction[0]) & shift_onehot[0]) | (efraction[0] & shift_onehot[1])
 
   shifted_fraction[0] = summary_lines
 
@@ -80,7 +82,7 @@ doc"""
 end
 
 doc"""
-  `add_shift_onehot(sign, provisional_sum_frac, bits)`
+  `add_find_shift_onehot(sign, provisional_sum_frac, bits)`
   analyzes the provisional sum fraction and ouputs a one-hot encoding of the
   shift value.  The encoding is as follows:
 
@@ -287,7 +289,7 @@ doc"""
   provisional_exp = lhs_dom_exp | rhs_dom_exp
 
   #extract a one-hot shift analysis from the provisional sum.
-  frc_shift_onehot = add_shift_onehot(sum_sgn, provisional_frc, bits)
+  frc_shift_onehot = add_find_shift_onehot(sum_sgn, provisional_frc, bits)
 
   #shift the fraction.  This is not necessarily the finalized fraction, as the
   #value can be altered by an underflow or overflow process.

@@ -59,8 +59,8 @@ function mullinrow(vec::Wire{119:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v}, row)
 
   #set state variables.
   vec_s = Vector{State}(8)
-  vec_e = Vector{_E08}(8)
-  vec_f = Vector{_F08}(8)
+  vec_e = Vector{Wire{_E08}}(8)
+  vec_f = Vector{Wire{_F08}}(8)
 
   #set accumulator values.
   acc_s = Vector{State}(8)
