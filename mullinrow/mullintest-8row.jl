@@ -63,7 +63,7 @@ function test_mullin_8rows()
       res_f = Float64.(matrixvals_p) * Float64.(vectorvals_p) + Float64.(accumulators_p)
 
       #get the wrapped results, should be Unsigned 64-bit ints.
-      row_answer = mullin_nrow_wrapper(accumulators_i, matrixvals_i, vectorvals_i, rows)
+      row_answer = mullin_nrow_wrapper(accumulators_i, matrixvals_i, vectorvals_i, 8)
 
       #broadcast the row to be 16-bit posit
       res_m = Float64.(P16.(row_answer))

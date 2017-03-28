@@ -10,13 +10,6 @@ include("./encoder/posit_encode.v.jl")
 include("./multiplier/posit_mult.v.jl")
 include("./adder/posit_add.v.jl")
 
-#=
-lhs = 0x05
-rhs = 0x60
-println(bits(posit_adder(lhs, rhs, 8)))
-exit()
-=#
-
 #testing suite
 
 include("./general/methods_testing.jl")
@@ -44,5 +37,5 @@ include("./mullinrow/mullintest-8row.jl")
 test_mullin_mul()
 test_mullin_add()
 
-#test_mullin_1row()
-#test_mullin_8rows()
+test_mullin_1row()
+test_mullin_8rows()
