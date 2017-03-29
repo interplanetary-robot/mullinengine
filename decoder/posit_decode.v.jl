@@ -207,3 +207,5 @@ doc"""
   #set the wire to the extended posit representation.
   eposit = Wire(infzeroflags, posit[msb], regime_bits, expfrac_bits)
 end
+
+#TODO:  update this so that decode_posit emits a different structure.

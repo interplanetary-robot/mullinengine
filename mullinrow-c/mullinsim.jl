@@ -62,11 +62,12 @@ function b16_2p8(buff::mullin_buff16)::UInt8
     inf && return 0x80
     zer && return 0x00
   end
-  sgn = reinterpret(Bool, (buff.s & 0x01))
+  local sgn::Bool = reinterpret(Bool, (buff.s & 0x01))
   #calculate the exponent.  Rebias around the 8-bit bias value (15 -> 7)
   #trim the exponent as needed.
-  shift::Int64
-  prefix::UInt8
+  local shift::Int64
+  local prefix::UInt8
+
   if sgn  #presume negative
     #get parameters based on rebiased exponent
     if buff.e > 13
@@ -81,18 +82,21 @@ function b16_2p8(buff::mullin_buff16)::UInt8
       shift = buff.e - 15
       prefix = 0x80
     else
-      shift = buff.e - 14
+      shift = 14 - buff.e
       prefix = 0x00
     end
   end
+
+  #println("shift:", shift)
+
   #next, construct the fraction by shifting to the right nine positions, then
   #merging with the prefix.
-  frac8::UInt8 = (buff.f >> 9) | prefix
+  local frac8::UInt8 = (buff.f >> 9) | prefix
 
   #this needs to be an *arithmetic* shift.
-  constructed_8::UInt8 = frac8 >>> shift
+  local constructed_8::UInt8 = frac8 >>> shift
   #figure out the guard and summary bits.
-  shiftbit::UInt16 = (0x0001 << (shift + 8))
+  local shiftbit::UInt16 = (0x0001 << (shift + 8))
   inner = (constructed_8 & 0x01) != 0
   guard = (shift == 0) ? (buff.g & 0x2 != 0) : ((buff.f & shiftbit)  != 0)
   summary = (buff.f & (shiftbit - one(UInt16))) != 0
