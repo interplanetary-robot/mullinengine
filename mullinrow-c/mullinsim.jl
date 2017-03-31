@@ -1,6 +1,4 @@
-#prototyping the mullinrow-c thing.
-
-using FixedSizeArrays
+#prototyping the mullinrow-c thing
 
 #won't bother making these bitstypes since the mullinsim is supposed to be like
 #a c library, and c doesn't make a distinction between ints and bits.
@@ -16,8 +14,6 @@ type mullin_buff8
   f::MFrac8
 end
 
-Base.zero(::Type{mullin_buff8}) = mullin_buff8(0x2, 0, 0x00)
-
 type mullin_buff16
   s::MStats
   e::MExp
@@ -25,12 +21,6 @@ type mullin_buff16
   g::MGS
 end
 
-Base.zero(::Type{mullin_buff16}) = mullin_buff16(0x2, 0, 0x0000, 0x0)
-
-type mullin_row_simulator
-  accum_rows::Mat{8,9,mullin_buff16}
-  matrix::Mat{8,8,mullin_buff8}
-end
 
 P8 = Posit{8,0}
 
