@@ -1,4 +1,5 @@
-#tests to see if p2b8 works.
+################################################################################
+#testing 8-bit posit decoding.
 
 function encode_posit8_wrapper(mb::mullin_buff8)
   isinf = UInt8((mb.s & 0x04) != 0)
@@ -14,7 +15,10 @@ for posit = 0x00:0xFF
   @test encode_posit8_wrapper(p2b8(posit)) == posit
 end
 println("OK")
-end
+end #@time
+
+################################################################################
+#testing 16-bit posit buffer encoding to an 8-bit posit.
 
 @time begin
 print("testing posit logical (non-wire) encoding...")
@@ -31,4 +35,4 @@ for p16 = 0x0000:0x0080
   @test (Posit{8,0}(b16_2p8(p16struct)), p16) == (p8, p16)
 end
 println("OK")
-end
+end #@time

@@ -8,11 +8,11 @@ doc"""
   already had its product calculated and completes the process of multiplication
   on this value.
 """
-@verilog function mullin_mul(lhs_s::State, lhs_e::Wire, lhs_f::Wire,
-                             rhs_s::State, rhs_e::Wire, rhs_f::Wire,
+@verilog function mullin_mul(lhs_s::Wire{2:0v}, lhs_e::Wire, lhs_f::Wire,
+                             rhs_s::Wire{2:0v}, rhs_e::Wire, rhs_f::Wire,
                              raw_m::Wire, bits_in::Integer, bits_out::Integer)
 
-  @suffix           "$(size_in)_to_$(size_out)bit"
+  @suffix           "$(bits_in)_to_$(bits_out)bit"
   @input lhs_e      range(regime_bits(bits_in))
   @input lhs_f      range(bits_in)
   @input rhs_e      range(regime_bits(bits_in))

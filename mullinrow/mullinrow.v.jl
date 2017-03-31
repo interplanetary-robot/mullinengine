@@ -24,7 +24,7 @@ doc"""
   |           (bits - 3) bit           |   1 bit   |        2 bits          |
 
 """
-@verilog function round_accumulator(acc_s::State, ur_acc_e::Wire, ur_acc_f::Wire, bits)
+@verilog function round_accumulator(acc_s::Wire{2:0v}, ur_acc_e::Wire, ur_acc_f::Wire, bits)
   @suffix                  "_$(bits)bit"
   @input ur_acc_e          range(regime_bits(bits))
   @input ur_acc_f          range(bits)
@@ -52,10 +52,8 @@ function printer(name, s, e, f, bits)
   println(name, ": P(0x", hex(Unsigned(encode_posit(s[2], s[1], s[0], e, f[msb:3v], f[2:1v], bits)),bits ÷ 4), ")")
 end
 
-doc"""
-  mullinrow(vec_s, vec_e, vec_f, acc_s, acc_f, acc_e, mul_s, mul_e, mul_f, mode, rownumber, flags)
-"""                #state variables           #exponent variables        #fraction variables
-function mullinrow(vec::Wire{119:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v}, row)
+@verilog function mullinrow(vec::Wire{119:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v}, row)
+  @suffix       "$row"
 
   #set state variables.
   vec_s = Vector{State}(8)
@@ -116,9 +114,9 @@ function mullinrow(vec::Wire{119:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v}, row)
   end
 
   #set aside wires that will be used for addition.
-  add_s               = Vector{State}(8)
-  add_zer             = Vector{SingleWire}(8)
-  add_sgn             = Vector{SingleWire}(8)
+  add_s               = Vector{Wire{2:0v}}(8)
+  add_zer             = Vector{Wire{0:0v}}(8)
+  add_sgn             = Vector{Wire{0:0v}}(8)
   add_provisional_exp = Vector{Wire{_E16}}(8)
   add_provisional_frc = Vector{Wire{17:0v}}(8)
   add_e               = Vector{Wire{_E16}}(8)

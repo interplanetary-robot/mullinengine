@@ -67,7 +67,7 @@ end
 
   sum_zer = ((acc_zer & mul_zer) | sum_zerocheck) | sum_nan
 
-  Wire(sum_inf, sum_zer, sum_sgn)
+  add_state = Wire(sum_inf, sum_zer, sum_sgn)
 end
 
 doc"""

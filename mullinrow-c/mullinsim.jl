@@ -16,6 +16,8 @@ type mullin_buff8
   f::MFrac8
 end
 
+Base.zero(::Type{mullin_buff8}) = mullin_buff8(0x2, 0, 0x00)
+
 type mullin_buff16
   s::MStats
   e::MExp
@@ -23,7 +25,12 @@ type mullin_buff16
   g::MGS
 end
 
-typealias mullin_row_simulator Mat{8,8,mullin_buff8}
+Base.zero(::Type{mullin_buff16}) = mullin_buff16(0x2, 0, 0x0000, 0x0)
+
+type mullin_row_simulator
+  accum_rows::Mat{8,9,mullin_buff16}
+  matrix::Mat{8,8,mullin_buff8}
+end
 
 P8 = Posit{8,0}
 
@@ -48,6 +55,8 @@ function p2b8(posit::UInt8)
   f::MFrac8    = posit << (shft + Int8(1))
   mullin_buff8(s,e,f)
 end
+
+p2b8(posit::Posit{8,0}) = p2b8(UInt8(reinterpret(UInt64, posit) >> 56))
 
 #create a function which takes a 16-bit posit buffer and returns an *8 bit*
 #value.
@@ -87,8 +96,6 @@ function b16_2p8(buff::mullin_buff16)::UInt8
     end
   end
 
-  #println("shift:", shift)
-
   #next, construct the fraction by shifting to the right nine positions, then
   #merging with the prefix.
   local frac8::UInt8 = (buff.f >> 9) | prefix
@@ -110,10 +117,4 @@ function b16_2p8(buff::mullin_buff16)::UInt8
     constructed_8 == 0x80 && return (0x7F)
     return constructed_8 & 0x7F
   end
-end
-
-function create_mullin_simulator(m::Matrix{P8})
-  @assert shape(m) == (8,8)
-  #broadcast the p2b over the simulator.
-  mullin_row_simulator(p2b8.(m))
 end
