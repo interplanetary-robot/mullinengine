@@ -2,7 +2,7 @@ using Verilog
 using Base.Test
 using SigmoidNumbers
 
-const TESTSET = [:mullinsim]
+const TESTSET = []#:mullinsim]
 should_test(s) = s in TESTSET || "all" in ARGS
 
 include("./general/posit-facts.jl")
@@ -62,3 +62,5 @@ include("mullinrow-c/mullinsim.jl")
 if should_test(:mullinsim)
   include("mullinrow-c/mullinsim-test.jl")
 end
+
+include("./mullinrow/mullintest-8row-c.jl")

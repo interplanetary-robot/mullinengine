@@ -140,5 +140,5 @@ end
     add_e[col], add_f[col] = mullin_addition_cleanup(add_sgn[col], add_provisional_exp[col], add_provisional_frc[col], 16)
   end
 
-  Wire([Wire(add_s[idx], add_e[idx], add_f[idx]) for idx in 8:-1:1]...)
+  result_acc = Wire([Wire(add_s[idx], add_e[idx], add_f[idx]) for idx in 8:-1:1]...)
 end
