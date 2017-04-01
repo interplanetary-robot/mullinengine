@@ -209,13 +209,18 @@ end
 end
 
 
-@verilog function add_zero_checker(lhs_sgn::SingleWire, lhs_exp::Wire, lhs_frac::Wire, rhs_sgn::SingleWire, rhs_exp::Wire, rhs_frac::Wire, bits::Integer)
+@verilog function add_zero_checker(lhs_s::Wire{2:0v}, lhs_exp::Wire, lhs_frac::Wire, rhs_s::Wire{2:0v}, rhs_exp::Wire, rhs_frac::Wire, bits::Integer)
   @suffix             "$(bits)bit"
 
   @input lhs_exp      range(regime_bits(bits))
   @input rhs_exp      range(regime_bits(bits))
   @input lhs_frac     range(bits - 3)
   @input rhs_frac     range(bits - 3)
+
+  lhs_sgn = lhs_s[0]
+  rhs_sgn = rhs_s[0]
+  lhs_zer = lhs_s[1]
+  rhs_zer = rhs_s[1]
 
   lhs_sgn_augment = (~|(lhs_frac)) & lhs_sgn
   rhs_sgn_augment = (~|(rhs_frac)) & rhs_sgn
@@ -228,7 +233,7 @@ end
   #they should sum to zero, which we check by nor'ing.
   frac_match = (~|)(lhs_frac + rhs_frac)
 
-  iszero = (lhs_sgn ^ rhs_sgn) & (exp_match & frac_match)
+  iszero = (lhs_sgn ^ rhs_sgn) & (exp_match & frac_match) & (~lhs_zer) & (~rhs_zer) | (lhs_zer & rhs_zer)
 end
 
 doc"""
@@ -244,12 +249,14 @@ doc"""
   @input rhs_e        range(eposit_size(bits))
 
   #unpack the extended posit data structure.
+  lhs_s    = lhs_e[msb:(msb-2)v]
   lhs_inf  = lhs_e[msb]
   lhs_zer  = lhs_e[msb-1]
   lhs_sgn  = lhs_e[msb-2]
   lhs_exp  = lhs_e[(msb-3):(bits-3)v]
   lhs_frac = lhs_e[range(bits - 3)]
 
+  rhs_s    = rhs_e[msb:(msb-2)v]
   rhs_inf  = rhs_e[msb]
   rhs_zer  = rhs_e[msb-1]
   rhs_sgn  = rhs_e[msb-2]
@@ -260,7 +267,7 @@ doc"""
   sum_inf  = lhs_inf | rhs_inf
   sum_nan  = (lhs_inf & rhs_inf) | ((lhs_inf & lhs_zer) | (rhs_inf & rhs_zer))
   sum_zer1 = lhs_zer & rhs_zer
-  sum_zer2 = add_zero_checker(lhs_sgn, lhs_exp, lhs_frac, rhs_sgn, rhs_exp, rhs_frac, bits)
+  sum_zer2 = add_zero_checker(lhs_s, lhs_exp, lhs_frac, rhs_s, rhs_exp, rhs_frac, bits)
   sum_zer = (sum_zer1 | sum_zer2) | sum_nan
 
   #create zeroed results in the event we're adding a zero value.

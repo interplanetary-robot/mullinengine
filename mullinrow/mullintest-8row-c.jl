@@ -151,8 +151,8 @@ doc"""
     res_wires[idx] = encode_posit_wrapper(acc_8[(24 * idx - 1):(24 * (idx - 1))v])
   end
 
-  res_msb = Wire(res_wires[8:-1:5]...)
   res_lsb = Wire(res_wires[4:-1:1]...)
+  res_msb = Wire(res_wires[8:-1:5]...)
 
   #emits a 128-bit result vector.
   (res_msb, res_lsb)
@@ -162,22 +162,69 @@ end
 #do cgen on the 8-row setup.
 @verilate mullin_8row_c_wrapper
 
+function squish(v::Vector{UInt16})::UInt64
+  reinterpret(UInt64, UInt8.(v .>> 8))[1]
+end
+
 function test_mullin_8rows_c()
   better_count = 0
   worse_count = 0
   #do this 1:1000
-  for round in 1:10
+  for round in 1:1
 
-    accumulators_i = [rand(0x0000:0xFFFF) for n in 1:8]
-    matrixvals_i   = [rand(0x0000:0x0100:0xFF00) for n in 1:8, m in 1:8]
+    #accumulators_i = [rand(0x0000:0xFFFF) for n in 1:8]
+    accumulators_i = [0x0000 for n in 1:8]
+    #matrixvals_i   = [rand(0x0000:0x0100:0xFF00) for n in 1:8, m in 1:8]
+    #matrixvals_i   = [(n == 1) ? 0x4000 : 0x0000 for n in 1:8, m in 1:8]
+    matrixvals_i   = [(n==m) ? 0x4000 : 0x0000 for n in 1:8, m in 1:8]
     vectorvals_i   = [rand(0x0000:0x0100:0xFF00) for n in 1:8]
+
+    println("acc:", accumulators_i)
+    println("vec:", vectorvals_i)
 
     try
       #get the wrapped results, should be Unsigned 64-bit ints.
-      row_answer = mullin_nrow_wrapper(accumulators_i, matrixvals_i, vectorvals_i, 8)
-      #issue to the c-wrapped function.
+      answer_vec = mullin_nrow_wrapper(accumulators_i, matrixvals_i, vectorvals_i, 8)
+      (ans_l_t, ans_m_t) = reinterpret(UInt64, UInt16.(answer_vec))
 
-      @test row_answer =
+      #assign values to be issued to the c wrapper.
+      (acc_l, acc_m) = reinterpret(UInt64, reverse(accumulators_i))
+      vec_a = squish(vectorvals_i)
+      mtx_0 = squish(matrixvals_i[:,1])
+      mtx_1 = squish(matrixvals_i[:,2])
+      mtx_2 = squish(matrixvals_i[:,3])
+      mtx_3 = squish(matrixvals_i[:,4])
+      mtx_4 = squish(matrixvals_i[:,5])
+      mtx_5 = squish(matrixvals_i[:,6])
+      mtx_6 = squish(matrixvals_i[:,7])
+      mtx_7 = squish(matrixvals_i[:,8])
+
+      println(hex(acc_l))
+      println(hex(acc_m))
+      println(hex(vec_a))
+      println("---------")
+      println(hex(mtx_0, 16))
+      println(hex(mtx_1, 16))
+      println(hex(mtx_2, 16))
+      println(hex(mtx_3, 16))
+      println(hex(mtx_4, 16))
+      println(hex(mtx_5, 16))
+      println(hex(mtx_6, 16))
+      println(hex(mtx_7, 16))
+
+      #issue to the c-wrapped function.
+      (ans_m, ans_l) = mullin_8row_c_wrapper_c(
+        acc_m, acc_l, vec_a,
+        mtx_0, mtx_1, mtx_2,
+        mtx_3, mtx_4, mtx_5,
+        mtx_6, mtx_7)
+
+      println("c: ", hex(ans_m,16), hex(ans_l,16))
+      println("j: ", hex(ans_m_t,16), hex(ans_l_t,16))
+
+      @test (ans_m_t == ans_m)
+      @test (ans_l_t == ans_l)
+
     catch e
       #skip over NaNs.
       if isa(e,SigmoidNumbers.NaNError)

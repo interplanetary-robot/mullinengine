@@ -2,7 +2,7 @@ using Verilog
 using Base.Test
 using SigmoidNumbers
 
-const TESTSET = [:add8]#:mullinsim]
+const TESTSET = [:mullinsim]
 should_test(s) = s in TESTSET || "all" in ARGS
 
 include("./general/posit-facts.jl")
@@ -24,7 +24,7 @@ if should_test(:basics)
 end
 
 if should_test(:add8)
-  #@time test_8bit_add()
+  @time test_8bit_add()
   include("./adder/posit_add_test.cg.jl")
 end
 if should_test(:mul8)
@@ -32,7 +32,7 @@ if should_test(:mul8)
   include("./multiplier/posit_mult_test.cg.jl")
 end
 
-#srand(1)
+srand(1)
 
 #for restricted printing options
 
@@ -55,7 +55,11 @@ end
 include("mullinrow-c/mullinsim.jl")
 
 if should_test(:mullinsim)
-  include("mullinrow-c/mullinsim-test.jl")
-end
+  should_test(:mullin) || include("./mullinrow/mullintest-8row.jl")
 
-include("./mullinrow/mullintest-8row-c.jl")
+  #identity_test_me()
+  #identity_test_mullin_8rows()
+  include("./mullinrow-c/mullinsim-test.jl")
+  include("./mullinrow/mullintest-8row-c.jl")
+  test_mullin_8rows_c()
+end

@@ -48,10 +48,6 @@ doc"""
   (acc_e, acc_f)
 end
 
-function printer(name, s, e, f, bits)
-  println(name, ": P(0x", hex(Unsigned(encode_posit(s[2], s[1], s[0], e, f[msb:3v], f[2:1v], bits)),bits ÷ 4), ")")
-end
-
 @verilog function mullinrow(vec::Wire{119:0v}, acc::Wire{191:0v}, mtx::Wire{119:0v}, row)
   @suffix       "$row"
 
@@ -105,7 +101,6 @@ end
   for col = 1:8
     #go ahead and do this step always.
     mul_raw_f[col] = vec_f[row] * mtx_f[col]
-
     #this routine will be moved to a conditional that depends on what type of
     #multiplication routine we're doing.
     mul_s[col], mul_e[col], mul_f[col] = mullin_mul(vec_s[row], vec_e[row], vec_f[row],
@@ -128,17 +123,17 @@ end
     #different function in the future, that can accomodate different modes.
     add_sgn[col], add_provisional_exp[col], add_provisional_frc[col] = mullin_frc_add(acc_s[col], acc_e[col], acc_f[col],
                                                                                       mul_s[col], mul_e[col], mul_f[col], 16)
-
     #check for zeros.
-    add_zer[col] = add_zero_checker(acc_s[col][0], acc_e[col], acc_f[col][msb:3v],
-                                    mul_s[col][0], mul_e[col], mul_f[col][msb:3v], 16)
+    add_zer[col] = add_zero_checker(acc_s[col], acc_e[col], acc_f[col][msb:3v],
+                                    mul_s[col], mul_e[col], mul_f[col][msb:3v], 16)
 
     #set various state variables.
     add_s[col]   = mullin_addition_state(acc_s[col], mul_s[col], add_sgn[col], add_zer[col])
 
-    #then do post-shift adjustment stuff.
+    #then do post-shift adjustment stuff to generate provisional values.
     add_e[col], add_f[col] = mullin_addition_cleanup(add_sgn[col], add_provisional_exp[col], add_provisional_frc[col], 16)
   end
+
 
   result_acc = Wire([Wire(add_s[idx], add_e[idx], add_f[idx]) for idx in 8:-1:1]...)
 end

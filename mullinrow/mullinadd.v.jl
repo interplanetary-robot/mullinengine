@@ -42,11 +42,13 @@ doc"""
   #zero it out if the corresponding side is zero.
   z_acc_f = a_acc_f  & ((bits + 1) * (~acc_zer))
   z_mul_f = a_mul_f  & ((bits + 1) * (~mul_zer))
+  z_acc_e = acc_e & (regime_bits(bits) * ~(acc_zer))
+  z_mul_e = mul_e & (regime_bits(bits) * ~(mul_zer))
 
   #the acc_dom_frac is going to also be used for "other types of multiplication"
   #plus one extra bit.
-  acc_wins, acc_dom_exp, acc_dom_frc = add_theoretical(acc_e, z_acc_f, mul_e, z_mul_f, bits, 1)
-  mul_wins, mul_dom_exp, mul_dom_frc = add_theoretical(mul_e, z_mul_f, acc_e, z_acc_f, bits, 1)
+  acc_wins, acc_dom_exp, acc_dom_frc = add_theoretical(z_acc_e, z_acc_f, z_mul_e, z_mul_f, bits, 1)
+  mul_wins, mul_dom_exp, mul_dom_frc = add_theoretical(z_mul_e, z_mul_f, z_acc_e, z_acc_f, bits, 1)
 
   res_sgn = (acc_wins & acc_sgn) | (mul_wins & mul_sgn) | (acc_sgn & mul_sgn)
   res_exp = acc_dom_exp          | mul_dom_exp
