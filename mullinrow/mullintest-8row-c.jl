@@ -33,7 +33,7 @@ doc"""
 @verilog function mullin_8row_c_wrapper(
   acc_msb::Wire{63:0v},
   acc_lsb::Wire{63:0v},
-  vector::Wire{63:0v},
+  vec_a::Wire{63:0v},
   mtx_0::Wire{63:0v},
   mtx_1::Wire{63:0v},
   mtx_2::Wire{63:0v},
@@ -57,7 +57,7 @@ doc"""
   #assemble the vector wire.
   initial_vector = Vector{Wire{14:0v}}(8)
   for idx = 1:8
-    initial_vector[idx] = decode_posit_wrapper8(vector[(8 * idx - 1):(8 * (idx - 1))v])
+    initial_vector[idx] = decode_posit_wrapper8(vec_a[(8 * idx - 1):(8 * (idx - 1))v])
   end
   vec = Wire(initial_vector...)
 
@@ -156,4 +156,35 @@ doc"""
 
   #emits a 128-bit result vector.
   (res_msb, res_lsb)
+end
+
+
+#do cgen on the 8-row setup.
+@verilate mullin_8row_c_wrapper
+
+function test_mullin_8rows_c()
+  better_count = 0
+  worse_count = 0
+  #do this 1:1000
+  for round in 1:10
+
+    accumulators_i = [rand(0x0000:0xFFFF) for n in 1:8]
+    matrixvals_i   = [rand(0x0000:0x0100:0xFF00) for n in 1:8, m in 1:8]
+    vectorvals_i   = [rand(0x0000:0x0100:0xFF00) for n in 1:8]
+
+    try
+      #get the wrapped results, should be Unsigned 64-bit ints.
+      row_answer = mullin_nrow_wrapper(accumulators_i, matrixvals_i, vectorvals_i, 8)
+      #issue to the c-wrapped function.
+
+      @test row_answer =
+    catch e
+      #skip over NaNs.
+      if isa(e,SigmoidNumbers.NaNError)
+        continue
+      end
+
+      rethrow()
+    end
+  end
 end

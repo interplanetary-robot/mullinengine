@@ -149,7 +149,7 @@ doc"""
 """
 @verilog function posit_extended_multiplier(lhs::Wire, rhs::Wire, bits_in::Integer, bits_out::Integer)
   @assert bits_in <= bits_out
-  @suffix "$(bits_in)bit_to_$(bits_out)bit"
+  @suffix (bits_in != bits_out ? "$(bits_in)bit_to_$(bits_out)bit" : "$(bits_in)bit"
   @input lhs range(eposit_size(bits_in))                  #decare that lhs and rhs
   @input rhs range(eposit_size(bits_in))                  #decare that lhs and rhs
 

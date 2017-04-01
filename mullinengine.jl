@@ -2,7 +2,7 @@ using Verilog
 using Base.Test
 using SigmoidNumbers
 
-const TESTSET = []#:mullinsim]
+const TESTSET = [:add8]#:mullinsim]
 should_test(s) = s in TESTSET || "all" in ARGS
 
 include("./general/posit-facts.jl")
@@ -24,18 +24,13 @@ if should_test(:basics)
 end
 
 if should_test(:add8)
-  @time test_8bit_add()
+  #@time test_8bit_add()
+  include("./adder/posit_add_test.cg.jl")
 end
 if should_test(:mul8)
   @time test_8bit_mul()
-end
-if "addc" in ARGS
-  include("./adder/posit_add_test.cg.jl")  #for now, can only test one at a time.
-end
-if "mulc" in ARGS
   include("./multiplier/posit_mult_test.cg.jl")
 end
-#work with the mullin engine proper.
 
 #srand(1)
 

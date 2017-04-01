@@ -53,7 +53,7 @@ function test_mullin_1row()
       for idx = 1:8
         #calculate the "true" value.
         true_value = Float64(acc_d_p[idx]) + Float64(mtx_d_p[idx]) * Float64(vec_d_p)
-        print(idx, " ", acc_d_p[idx], " + ", mtx_d_p[idx], " * ", vec_d_p, " ≈ ",  Posit{16,0}(true_value))
+        #print(idx, " ", acc_d_p[idx], " + ", mtx_d_p[idx], " * ", vec_d_p, " ≈ ",  Posit{16,0}(true_value))
 
         float_true_value = Float64(Posit{16,0}(true_value))
 
@@ -63,7 +63,7 @@ function test_mullin_1row()
         posit_result_f = Float64(posit_result)
         mullin_result_f = Float64(mullin_result)
 
-        println(" posit: $(prettyfloat(posit_result)) ($posit_result), mullin: $(prettyfloat(mullin_result)) ($mullin_result)")
+        #println(" posit: $(prettyfloat(posit_result)) ($posit_result), mullin: $(prettyfloat(mullin_result)) ($mullin_result)")
 
         if isfinite(posit_result_f) && isfinite(mullin_result_f) && isfinite(float_true_value)
           @test abs(posit_result_f - float_true_value) >= abs(mullin_result_f - float_true_value)
