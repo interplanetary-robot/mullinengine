@@ -52,12 +52,12 @@ doc"""
   for idx = 5:8
     initial_accumulators[idx] = decode_posit_wrapper16(acc_msb[(16*idx-65):(16 * (idx - 5))v])
   end
-  acc_0 = Wire(initial_accumulators...)
+  acc_0 = Wire(reverse(initial_accumulators)...)
 
   #assemble the vector wire.
   initial_vector = Vector{Wire{14:0v}}(8)
   for idx = 1:8
-    initial_vector[idx] = decode_posit_wrapper8(vec_a[(8 * idx - 1):(8 * (idx - 1))v])
+    initial_vector[9-idx] = decode_posit_wrapper8(vec_a[(8 * idx - 1):(8 * (idx - 1))v])
   end
   vec = Wire(initial_vector...)
 
@@ -65,6 +65,7 @@ doc"""
   #because verilator support for wire vectors is uncertain.
 
   col0_vector = Vector{Wire{14:0v}}(8)
+
   for idx = 1:8
     col0_vector[idx] = decode_posit_wrapper8(mtx_0[(8 * idx - 1):(8 * (idx - 1))v])
   end
@@ -151,8 +152,8 @@ doc"""
     res_wires[idx] = encode_posit_wrapper(acc_8[(24 * idx - 1):(24 * (idx - 1))v])
   end
 
-  res_lsb = Wire(res_wires[4:-1:1]...)
-  res_msb = Wire(res_wires[8:-1:5]...)
+  res_lsb = Wire(res_wires[5:8]...)
+  res_msb = Wire(res_wires[1:4]...)
 
   #emits a 128-bit result vector.
   (res_msb, res_lsb)
@@ -160,27 +161,19 @@ end
 
 
 #do cgen on the 8-row setup.
-@verilate mullin_8row_c_wrapper
+#@verilate mullin_8row_c_wrapper
 
 function squish(v::Vector{UInt16})::UInt64
   reinterpret(UInt64, UInt8.(v .>> 8))[1]
 end
 
 function test_mullin_8rows_c()
-  better_count = 0
-  worse_count = 0
-  #do this 1:1000
-  for round in 1:1
+  good_count = 0
+  for round in 1:100
 
-    #accumulators_i = [rand(0x0000:0xFFFF) for n in 1:8]
-    accumulators_i = [0x0000 for n in 1:8]
-    #matrixvals_i   = [rand(0x0000:0x0100:0xFF00) for n in 1:8, m in 1:8]
-    #matrixvals_i   = [(n == 1) ? 0x4000 : 0x0000 for n in 1:8, m in 1:8]
-    matrixvals_i   = [(n==m) ? 0x4000 : 0x0000 for n in 1:8, m in 1:8]
+    accumulators_i = [rand(0x0000:0xFFFF) for n in 1:8]
+    matrixvals_i   = [rand(0x0000:0x0100:0xFF00) for n in 1:8, m in 1:8]
     vectorvals_i   = [rand(0x0000:0x0100:0xFF00) for n in 1:8]
-
-    println("acc:", accumulators_i)
-    println("vec:", vectorvals_i)
 
     try
       #get the wrapped results, should be Unsigned 64-bit ints.
@@ -199,19 +192,6 @@ function test_mullin_8rows_c()
       mtx_6 = squish(matrixvals_i[:,7])
       mtx_7 = squish(matrixvals_i[:,8])
 
-      println(hex(acc_l))
-      println(hex(acc_m))
-      println(hex(vec_a))
-      println("---------")
-      println(hex(mtx_0, 16))
-      println(hex(mtx_1, 16))
-      println(hex(mtx_2, 16))
-      println(hex(mtx_3, 16))
-      println(hex(mtx_4, 16))
-      println(hex(mtx_5, 16))
-      println(hex(mtx_6, 16))
-      println(hex(mtx_7, 16))
-
       #issue to the c-wrapped function.
       (ans_m, ans_l) = mullin_8row_c_wrapper_c(
         acc_m, acc_l, vec_a,
@@ -219,11 +199,10 @@ function test_mullin_8rows_c()
         mtx_3, mtx_4, mtx_5,
         mtx_6, mtx_7)
 
-      println("c: ", hex(ans_m,16), hex(ans_l,16))
-      println("j: ", hex(ans_m_t,16), hex(ans_l_t,16))
-
       @test (ans_m_t == ans_m)
       @test (ans_l_t == ans_l)
+
+      good_count += 1
 
     catch e
       #skip over NaNs.
@@ -234,4 +213,5 @@ function test_mullin_8rows_c()
       rethrow()
     end
   end
+  println("c version of mullin multiplier works for $good_count/100")
 end

@@ -78,7 +78,7 @@ doc"""
 end
 
 @verilog function mul_frac_trimmer(untrimmed_fraction::Wire, bits_in::Integer, bits_out::Integer)
-  @suffix                           "$(bits_in)bit_to_$(bits_out)bit"
+  @suffix                           ((bits_in != bits_out) ? "$(bits_in)bit_to_$(bits_out)bit" : "$(bits_in)bit")
   @input untrimmed_fraction         range(bits_in)
 
   output_size = bits_out - 3
@@ -149,7 +149,7 @@ doc"""
 """
 @verilog function posit_extended_multiplier(lhs::Wire, rhs::Wire, bits_in::Integer, bits_out::Integer)
   @assert bits_in <= bits_out
-  @suffix (bits_in != bits_out ? "$(bits_in)bit_to_$(bits_out)bit" : "$(bits_in)bit")
+  @suffix ((bits_in != bits_out) ? "$(bits_in)bit_to_$(bits_out)bit" : "$(bits_in)bit")
   @input lhs range(eposit_size(bits_in))                  #decare that lhs and rhs
   @input rhs range(eposit_size(bits_in))                  #decare that lhs and rhs
 
@@ -186,7 +186,7 @@ end
   @assert ispow2(bits_in)
   @assert ispow2(bits_out)
 
-  @suffix "$(bits_in)bit_to_$(bits_out)bit"
+  @suffix ((bits_in != bits_out) ? "$(bits_in)bit_to_$(bits_out)bit" : "$(bits_in)bit")
   @input lhs range(bits_in)                  #decare that lhs and rhs
   @input rhs range(bits_in)                  #decare that lhs and rhs
 

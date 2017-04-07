@@ -84,8 +84,8 @@ doc"""
                                                                      rhs_s, rhs_e, rhs_f, 16)
 
   #check for zeros.
-  add_zer = add_zero_checker(lhs_s[0], lhs_e, lhs_f[msb:3v],
-                             rhs_s[0], rhs_e, rhs_f[msb:3v], 16)
+  add_zer = add_zero_checker(lhs_s, lhs_e, lhs_f[msb:3v],
+                             rhs_s, rhs_e, rhs_f[msb:3v], 16)
 
   #set result state variables.
   add_s   = mullin_addition_state(lhs_s, rhs_s, add_sgn, add_zer)

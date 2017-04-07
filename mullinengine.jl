@@ -2,7 +2,7 @@ using Verilog
 using Base.Test
 using SigmoidNumbers
 
-const TESTSET = [:mullinsim]
+const TESTSET = []#:make_clib]#:mul8]
 should_test(s) = s in TESTSET || "all" in ARGS
 
 include("./general/posit-facts.jl")
@@ -28,7 +28,7 @@ if should_test(:add8)
   include("./adder/posit_add_test.cg.jl")
 end
 if should_test(:mul8)
-  @time test_8bit_mul()
+  #@time test_8bit_mul()
   include("./multiplier/posit_mult_test.cg.jl")
 end
 
@@ -56,10 +56,18 @@ include("mullinrow-c/mullinsim.jl")
 
 if should_test(:mullinsim)
   should_test(:mullin) || include("./mullinrow/mullintest-8row.jl")
+  should_test(:idtest) && identity_test_mullin_8rows()
 
-  #identity_test_me()
-  #identity_test_mullin_8rows()
   include("./mullinrow-c/mullinsim-test.jl")
   include("./mullinrow/mullintest-8row-c.jl")
   test_mullin_8rows_c()
 end
+
+if should_test(:make_clib)
+  should_test(:mullin_sim) || include("./mullinrow/mullintest-8row-c.jl")
+  verilate(mullin_8row_c_wrapper, (); path = "./cgen", with_source=true)
+end
+
+should_test(:mullin_sim) || include("./mullinrow/mullintest-8row-c.jl")
+include("./mullinrow/multilanguage_c_library.jl")
+test_c_conversions()
