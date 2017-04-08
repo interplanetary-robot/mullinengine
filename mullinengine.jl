@@ -68,6 +68,9 @@ if should_test(:make_clib)
   verilate(mullin_8row_c_wrapper, (); path = "./cgen", with_source=true)
 end
 
+should_test(:mullin) || include("./mullinrow/mullintest-8row.jl")
 should_test(:mullin_sim) || include("./mullinrow/mullintest-8row-c.jl")
 include("./mullinrow/multilanguage_c_library.jl")
-test_c_conversions()
+#test_c_conversions()
+generate_c_library()
+test_multilanguage_c_wrapper()

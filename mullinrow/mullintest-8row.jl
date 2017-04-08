@@ -7,7 +7,6 @@ n2pw8(n) = decode_posit(Wire(n, 8), 8)
 function mullin_nrow_wrapper(accumulators::Vector{UInt16}, matrixvals::Matrix{UInt16}, vectorvals::Vector{UInt16}, rows)
   accwire = Wire(n2pw16(accumulators[1]), Wire(0x0,3))
 
-  println("vec:", vectorvals)
   mtxwire = Vector{Wire}(8)
   for idx = 1:8
     mtxwire[idx] = Wire(n2pw8(matrixvals[1, idx] >> 8), Wire(0x0,3))
@@ -33,18 +32,7 @@ function mullin_nrow_wrapper(accumulators::Vector{UInt16}, matrixvals::Matrix{UI
 #
 #  println("accwire, 0:", accwire)
 
-
-println("vec:", vecwire)
-println("mullin_1 (notc):")
-println("acc:", accwire)
-println("mtx:", mtxwire[1])
-
   for idx = 1:8
-
-    println("mullin_$idx (notc):")
-    println("acc:", accwire)
-    println("mtx:", mtxwire[idx])
-
     accwire = mullinrow(vecwire, accwire, mtxwire[idx], idx)
   end
 

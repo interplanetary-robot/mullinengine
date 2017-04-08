@@ -64,11 +64,38 @@ function generate_c_library()
   #first verilate the most critical function.
   verilate(mullin_8row_c_wrapper, (), path = "./cgen", with_source = true)
   #next copy the library shim code over.
-  xferfiles = ["mullinsim.cpp", "posit_conversions.cpp"]
-  srcfiles = map((s) -> string("./cgen-code/", s), xferfiles)
-  dstfiles = map((s) -> string("./cgen/", s), xferfiles)
-
+  filenames = ["mullinsim", "posit_conversions"]
+  srcfiles = map((s) -> string("./cgen-code/", s, ".cpp"), filenames)
+  dstfiles = map((s) -> string("./cgen/", s, ".cpp"), filenames)
   cp.(srcfiles, dstfiles)
+
+  noncfilenames = ["mullin-c.h"]
+  srcfiles = map((s) -> string("./cgen-code/", s), noncfilenames)
+  dstfiles = map((s) -> string("./cgen/", s), noncfilenames)
+  cp.(srcfiles, dstfiles)
+
+  #next actually compile everything.
+
+  object_files = []
+
+  #first handle the stuff that has been verilated.
+  cd("./cgen/obj_dir") do
+    #run the make file.  This will throw an error due to not finding a --main
+    #but that's OK it just needs to make the object files.
+    append!(object_files, ["./obj_dir/$f" for f in readdir() if f[end-1:end] == ".o"])
+  end
+
+  #next handle the stuff that we're "patching in."
+  cd("./cgen") do
+
+    for fn in filenames
+      run(`cc -fpic -c $fn.cpp`)
+      push!(object_files, "./$fn.o")
+    end
+
+    #manually link the object files into a shared library.
+    run(`cc -Wall -shared $object_files -o libpositronickernel.so`)
+  end
 end
 
 # wraps the c function that is as follows:
@@ -84,10 +111,11 @@ function matrixfma!(res::Vector{Float64}, mtx::Matrix{Float64}, vec::Vector{Floa
   vec_p = pointer(vec)
   acc_p = pointer(acc)
 
-  #actually do the ccall.
-  ccall((:matrixmult64, "libsimc.so"), Void,
-    (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}),
-    res_p, mtx_p, vec_p, acc_p)
+  #create a functional call conversion.
+  mm64 = eval(:((a,b,c,d) -> ccall((:matrixmult64, "./cgen/libpositronickernel.so"), Void,
+    (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}), a, b, c, d)))
+
+  mm64(res_p, mtx_p, vec_p, acc_p)
 end
 
 #now, actually test everything.
@@ -95,19 +123,42 @@ end
 function test_multilanguage_c_wrapper()
   P16 = Posit{16, 0}
   P8 = Posit{8,0}
-  for idx = 1:100  #do a 100 trials, why not.
-    #generate the accumulator, vector, and matrix.
-    posit_acc = P16.(rand(UInt16, 8))
-    posit_mtx = P8.(rand(UInt8, 8, 8))
-    posit_vec = P8.(rand(UInt8, 8))
 
-    float_acc = Float64.(posit_acc)
-    float_mtx = Float64.(posit_mtx)
-    float_vec = Float64.(posit_vec)
+  #initialize the positronic kernel.
+  mm_init = eval(:(() -> ccall((:init, "./cgen/libpositronickernel.so"), Void,())))
+  mm_init()
+
+  for idx = 1:100  #do a 100 trials, why not.
+    #accumulators_i = zeros(UInt16, 8)
+    accumulators_i = rand(UInt16, 8)
+    matrixvals_i   = [m == 1 ? rand(0x0000:0x0100:0xFF00) : 0x0000 for n in 1:8, m in 1:8]
+    vectorvals_i   = [rand(0x0000:0x0100:0xFF00) for n in 1:8]
+
+    float_acc = Float64.(P16.(accumulators_i))
+    float_mtx = Float64.(P16.(matrixvals_i))
+    float_vec = Float64.(P16.(vectorvals_i))
     float_res = Vector{Float64}(8)
 
-    #do the matrix-fma
-    matrixfma!(float_res, float_mtx, float_vec, float_acc)
+    try
+
+      #do the matrix-fma using the exogenous C library
+      matrixfma!(float_res, float_mtx, float_vec, float_acc)
+
+      #we know this corresponds to the legit matrix multiply from elsewhere.
+      pfloat_res = mullin_nrow_wrapper(accumulators_i, matrixvals_i, vectorvals_i, 8)
+
+      #test for equality
+      fpfloat_res =  Float64.(P16.(pfloat_res))
+      @test float_res == fpfloat_res
+
+    catch e
+      #skip over NaNs.
+      if isa(e,SigmoidNumbers.NaNError)
+        continue
+      end
+
+      rethrow()
+    end
 
   end
 end
