@@ -69,7 +69,7 @@ function generate_c_library()
   dstfiles = map((s) -> string("./cgen/", s, ".cpp"), filenames)
   cp.(srcfiles, dstfiles)
 
-  noncfilenames = ["mullin-c.h"]
+  noncfilenames = ["mullin-c.h", "makefile"]
   srcfiles = map((s) -> string("./cgen-code/", s), noncfilenames)
   dstfiles = map((s) -> string("./cgen/", s), noncfilenames)
   cp.(srcfiles, dstfiles)
