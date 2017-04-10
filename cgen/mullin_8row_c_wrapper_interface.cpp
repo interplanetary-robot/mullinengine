@@ -18,7 +18,7 @@ extern "C" void finish(){
   delete mullin_8row_c_wrapper;
 }
 
-extern "C" void set(unsigned long long acc_msb,unsigned long long acc_lsb,unsigned long long vec_a,unsigned long long mtx_0,unsigned long long mtx_1,unsigned long long mtx_2,unsigned long long mtx_3,unsigned long long mtx_4,unsigned long long mtx_5,unsigned long long mtx_6,unsigned long long mtx_7){
+extern "C" void set(uint64_t acc_msb,uint64_t acc_lsb,uint64_t vec_a,uint64_t mtx_0,uint64_t mtx_1,uint64_t mtx_2,uint64_t mtx_3,uint64_t mtx_4,uint64_t mtx_5,uint64_t mtx_6,uint64_t mtx_7){
   mullin_8row_c_wrapper->acc_msb = acc_msb;
   mullin_8row_c_wrapper->acc_lsb = acc_lsb;
   mullin_8row_c_wrapper->vec_a = vec_a;
@@ -34,8 +34,8 @@ extern "C" void set(unsigned long long acc_msb,unsigned long long acc_lsb,unsign
 
 
 typedef struct{
-  unsigned long long res_msb;
-  unsigned long long res_lsb;
+  uint64_t res_msb;
+  uint64_t res_lsb;
 } output_struct;
 
 extern "C" void get(output_struct *value){

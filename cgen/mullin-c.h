@@ -1,19 +1,21 @@
-extern "C" unsigned short double_to_posit16(double fval);
-extern "C" unsigned char  double_to_posit8(double fval);
-extern "C" double posit16_to_double(unsigned short pval);
+#include <stdint.h>
+
+extern "C" uint16_t double_to_posit16(double fval);
+extern "C" uint8_t  double_to_posit8(double fval);
+extern "C" double posit16_to_double(uint16_t pval);
 
 extern "C" void matrixmult64(double *res, double *mtx, double *vec, double *acc);
 
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef struct{
-  unsigned long long res_msb;
-  unsigned long long res_lsb;
+  uint64_t res_msb;
+  uint64_t res_lsb;
 } output_struct;
 
 //functions that are coming in from the wrappers.
 extern "C" void init();
 extern "C" void step();
 extern "C" void finish();
-extern "C" void set(unsigned long long acc_msb,unsigned long long acc_lsb,unsigned long long vec_a,unsigned long long mtx_0,unsigned long long mtx_1,unsigned long long mtx_2,unsigned long long mtx_3,unsigned long long mtx_4,unsigned long long mtx_5,unsigned long long mtx_6,unsigned long long mtx_7);
+extern "C" void set(uint64_t acc_msb,uint64_t acc_lsb,uint64_t vec_a,uint64_t mtx_0,uint64_t mtx_1,uint64_t mtx_2,uint64_t mtx_3,uint64_t mtx_4,uint64_t mtx_5,uint64_t mtx_6,uint64_t mtx_7);
 extern "C" void get(output_struct *value);
