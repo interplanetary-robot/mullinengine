@@ -74,6 +74,12 @@ function generate_c_library()
   dstfiles = map((s) -> string("./cgen/", s), noncfilenames)
   cp.(srcfiles, dstfiles)
 
+  #add in critical verilator header files.
+  verilator_headers = ["verilated.h", "verilatedos.h", "verilated_config.h"]
+  src_headers = map((s) -> string("/usr/local/share/verilator/include/", s), verilator_headers)
+  dst_headers = map((s) -> string("./cgen/obj_dir", s), verilator_headers)
+  cp.(src_headers, dst_headers)
+
   #next actually compile everything.
 
   object_files = []
@@ -83,6 +89,8 @@ function generate_c_library()
     #run the make file.  This will throw an error due to not finding a --main
     #but that's OK it just needs to make the object files.
     append!(object_files, ["./obj_dir/$f" for f in readdir() if f[end-1:end] == ".o"])
+
+    /usr/local/share/verilator/include/verilatedos.h
   end
 
   #next handle the stuff that we're "patching in."
