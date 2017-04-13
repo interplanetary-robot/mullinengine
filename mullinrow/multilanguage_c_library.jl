@@ -69,7 +69,7 @@ function generate_c_library()
   dstfiles = map((s) -> string("./cgen/", s, ".cpp"), filenames)
   cp.(srcfiles, dstfiles)
 
-  noncfilenames = ["mullin-c.h", "makefile"]
+  noncfilenames = ["mullin-c.h", "makefile", "mullin_test.py"]
   srcfiles = map((s) -> string("./cgen-code/", s), noncfilenames)
   dstfiles = map((s) -> string("./cgen/", s), noncfilenames)
   cp.(srcfiles, dstfiles)
@@ -89,8 +89,6 @@ function generate_c_library()
     #run the make file.  This will throw an error due to not finding a --main
     #but that's OK it just needs to make the object files.
     append!(object_files, ["./obj_dir/$f" for f in readdir() if f[end-1:end] == ".o"])
-
-    /usr/local/share/verilator/include/verilatedos.h
   end
 
   #next handle the stuff that we're "patching in."
