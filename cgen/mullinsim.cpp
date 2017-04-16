@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-void exec_matrix_mult(uint16_t *res, uint8_t *mat, uint8_t *vec, uint16_t *acc);
+extern "C" void exec_matrix_mult(uint16_t *res, uint8_t *mat, uint8_t *vec, uint16_t *acc);
 
 /*******************************************************************************
   matrixmult64(res, mtx, vec, acc)
@@ -49,42 +49,41 @@ extern "C" void matrixmult64(double *res, double *mtx, double *vec, double *acc)
     res[idx] = posit16_to_double(p_res[idx]);
   }
 }
-/*
+
 // for now, only allow computation on 64-bit types
 extern "C" void matrixmult32(float *res, float *mtx, float *vec, float *acc){
   //first allocate the memory that will hold the values.
   //Do this on the stack (for now)
   uint16_t p_acc[8];
   uint8_t  p_vec[8];
-  uint8_t  p_mat[8][8];
+  uint8_t  p_mat[64];
   uint16_t p_res[8];
 
   //convert the accumulator from double to the 16-bit posit.
-  for (idx = 0; idx < 8; idx++){
+  for (int idx = 0; idx < 8; idx++){
     p_acc[idx] = single_to_posit16(acc[idx]);
   }
 
-  for (idx = 0; idx < 8; idx++){
+  for (int idx = 0; idx < 8; idx++){
     p_vec[idx] = single_to_posit8(vec[idx]);
   }
 
   //repeat the process for the matrix.  honor c's row-major convention.
-  for (idx = 0; idx < 8; idx++){
-    for (jdx = 0; jdx < 8; jdx++){
-      p_mat[idx][jdx] = single_to_posit8(mtx[8 * idx + jdx])
+  for (int idx = 0; idx < 8; idx++){
+    for (int jdx = 0; jdx < 8; jdx++){
+      p_mat[8 * idx + jdx] = single_to_posit8(mtx[8 * idx + jdx]);
     }
   }
 
-  exec_matrix_mult(p_res, p_mat, p_vec, p_acc)
+  exec_matrix_mult(p_res, p_mat, p_vec, p_acc);
 
   //populate the result vector.
-  for (idx = 0; idx < 8; idx++){
+  for (int idx = 0; idx < 8; idx++){
     res[idx] = posit16_to_single(p_res[idx]);
   }
 }
-*/
 
-void exec_matrix_mult(uint16_t *res, uint8_t *mat, uint8_t *vec, uint16_t *acc){
+extern "C" void exec_matrix_mult(uint16_t *res, uint8_t *mat, uint8_t *vec, uint16_t *acc){
   //first cast all of these pointers to values
   //fix endian-ness problems here.
   uint16_t acc_reordered[] = {acc[3], acc[2], acc[1], acc[0], acc[7], acc[6], acc[5], acc[4]};

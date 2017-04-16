@@ -4,6 +4,10 @@ extern "C" uint16_t double_to_posit16(double fval);
 extern "C" uint8_t  double_to_posit8(double fval);
 extern "C" double posit16_to_double(uint16_t pval);
 
+extern "C" uint16_t single_to_posit16(float fval);
+extern "C" uint8_t  single_to_posit8(float fval);
+extern "C" float posit16_to_single(uint16_t pval);
+
 extern "C" void matrixmult64(double *res, double *mtx, double *vec, double *acc);
 
 ////////////////////////////////////////////////////////////////////////////////

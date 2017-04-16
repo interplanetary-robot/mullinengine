@@ -18,6 +18,7 @@ endif
 ifeq ($(uname_S), Darwin)
     SHARED=-shared
     TARGET=-o libpositronickernel.so
+		LINKEROPT=-lstdc++
 endif
 
 CC=cc
@@ -30,7 +31,7 @@ NAME=mullin_8row_c_wrapper
 
 build: $(OFILES)
 	cd obj_dir && make -f Vmullin_8row_c_wrapper.mk
-	$(LINKER) -Wall $(SHARED) $(OFILES) ./obj_dir/*.o $(TARGET)
+	$(LINKER) $(LINKEROPT) -Wall $(SHARED) $(OFILES) ./obj_dir/*.o $(TARGET)
 
 .PHONY: clean
 clean:
